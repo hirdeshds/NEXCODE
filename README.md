@@ -648,46 +648,6 @@ See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 
 This project is licensed under the **MIT License** - see [LICENSE](LICENSE) file for details.
 
----
-
-## 🎯 Roadmap
-
-### Q2 2026
-- [ ] Multi-file context support
-- [ ] Advanced refactoring capabilities
-- [ ] JetBrains IDE integration
-
-### Q3 2026
-- [ ] Team collaboration features
-- [ ] Custom fine-tuning for enterprise models
-- [ ] Advanced analytics dashboard
-
-### Q4 2026
-- [ ] On-premise deployment options
-- [ ] Enterprise SSO integration
-- [ ] Advanced compliance features
-
----
-
-## 📊 Metrics & Analytics
-
-Track usage and performance:
-- Average completion time: <500ms
-- User satisfaction: >95%
-- API uptime: >99.9%
-- Token efficiency: Optimized per provider
-
----
-
-## 🙏 Acknowledgments
-
-Built with:
-- [FastAPI](https://fastapi.tiangolo.com/)
-- [VS Code Extension API](https://code.visualstudio.com/api)
-- [TypeScript](https://www.typescriptlang.org/)
-- Leading LLM providers (OpenAI, Anthropic, Azure)
-
----
 
 **Last Updated**: May 2026  
 **Version**: 1.0.0  
