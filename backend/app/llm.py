@@ -7,7 +7,7 @@ load_dotenv()
 # Use ClientV2 for modern chat features
 co = cohere.ClientV2(api_key=os.getenv("COHERE_API_KEY"))
 
-async def get_cohere_response(prompt: str, feature_type: str):
+def get_cohere_response(prompt: str, feature_type: str):
     """
     Unified function for all NexCode features using Cohere.
     """
