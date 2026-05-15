@@ -1,28 +1,33 @@
 import cohere
 import os
 from dotenv import load_dotenv
-import asyncio
 
 load_dotenv()
 
+# Use ClientV2 for modern chat features
 co = cohere.ClientV2(api_key=os.getenv("COHERE_API_KEY"))
 
-async def get_cohere_response(prompt: str, system_message: str = "You are an expert software engineer."):
+async def get_cohere_response(prompt: str, feature_type: str):
     """
-    Generic wrapper for Cohere's Chat API to handle generation, 
-    fixing, and explanation.
+    Unified function for all NexCode features using Cohere.
     """
-    response = co.chat(
-        model="command-r-08-2024",
+    # System prompts based on the documentation's features 
+    system_messages = {
+        "explain": "You are a senior engineer. Explain the code clearly and concisely.",
+        "generate": "You are a code generator. Output ONLY the code block without conversational text.",
+        "fix": "You are a debugging expert. Provide the corrected code in a diff-friendly format."
+    }
+
+    res = co.chat(
+        model="command-r-08-2024", # Native for NexCode pipeline 
         messages=[
-            {"role": "system", "content": system_message},
+            {"role": "system", "content": system_messages.get(feature_type, "")},
             {"role": "user", "content": prompt}
-        ],
-        temperature=0.3  
+        ]
     )
-    return response.message.content[0].text
-if __name__ == "__main__":
-    # Example usage
-    prompt = "Write a Python function that checks if a number is prime."
-    response = asyncio.run(get_cohere_response(prompt))
-    print(response)
+    return res.message.content[0].text
+
+
+
+
+
