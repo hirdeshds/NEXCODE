@@ -1,0 +1,4 @@
+cohere
+fastapi
+python-dotenv
+uvicorn
