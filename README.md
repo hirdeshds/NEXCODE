@@ -1,20 +1,19 @@
 <div align="center">
 
-#  Shiksha AI
+#  NexCode AI
 
-### Voice-Powered AI Teaching Assistant for Smart Classrooms
+### The Intelligent VS Code Extension & Pipeline Automation Tool
 
-[![Next.js](https://img.shields.io/badge/Next.js-16.2.9-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
-[![Cohere](https://img.shields.io/badge/Cohere-Command_A+-ff6f00?style=for-the-badge)](https://cohere.com/)
-[![React](https://img.shields.io/badge/React-19.2.4-61dafb?style=for-the-badge&logo=react)](https://react.dev/)
-[![Python](https://img.shields.io/badge/Python-3.11-3776ab?style=for-the-badge&logo=python)](https://python.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
+[![Anthropic](https://img.shields.io/badge/Claude_3.5_Sonnet-D97757?style=for-the-badge)](https://anthropic.com/)
+[![Cohere](https://img.shields.io/badge/Cohere_Command_R+-ff6f00?style=for-the-badge)](https://cohere.com/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ed?style=for-the-badge&logo=docker)](https://docker.com/)
-[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
+[![Status](https://img.shields.io/badge/Status-In_Development-blue?style=for-the-badge)](#)
 
-**Shiksha AI** is a production-grade, voice-first AI teaching assistant designed for Haryana government school classrooms. Teachers speak naturally — the AI explains concepts, generates quizzes, and reads aloud — all hands-free in **Hindi**, **English**, or **Hinglish**.
+**NexCode** is an AI-powered VS Code extension inspired by GitHub Copilot. It helps developers write, debug, and understand code using Large Language Models — and uniquely integrates with company CI/CD pipelines to automate code scanning and PR creation before code reaches production.
 
-[Getting Started](#getting-started) · [Architecture](#system-architecture) · [API Reference](#api-reference) · [Deployment](#deployment)
+[Overview](#1-project-overview) · [Features](#2-core-features) · [Architecture](#3-architecture) · [Setup & Installation](#7-setup--installation)
 
 </div>
 
@@ -22,790 +21,371 @@
 
 ## Table of Contents
 
-- [Overview](#overview)
-- [Core Architecture & Innovations](#core-architecture--innovations)
-- [System Design](#system-design)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
-- [Environment Variables](#environment-variables)
-- [API Reference](#api-reference)
-- [Frontend Component Architecture](#frontend-component-architecture)
-- [Custom Hooks Reference](#custom-hooks-reference)
-- [Design System](#design-system)
-- [Deployment](#deployment)
-- [Performance Considerations](#performance-considerations)
-- [Contributing](#contributing)
-- [License](#license)
+- [1. Project Overview](#1-project-overview)
+- [2. Core Features](#2-core-features)
+- [3. Architecture](#3-architecture)
+- [4. Technology Stack](#4-technology-stack)
+- [5. Project Structure](#5-project-structure)
+- [6. Pipeline Integration — Deep Dive](#6-pipeline-integration--deep-dive)
+- [7. Setup & Installation](#7-setup--installation)
+- [8. Keyboard Shortcuts & Commands](#8-keyboard-shortcuts--commands)
+- [9. Recommended Build Order](#9-recommended-build-order)
+- [10. Dependencies](#10-dependencies)
+- [11. Publishing to VS Code Marketplace](#11-publishing-to-vs-code-marketplace)
 
 ---
 
-## Overview
+## 1. Project Overview
 
-### Problem Statement
+**VISION**: An AI developer tool that doesn't just help you write code — it helps you ship it safely, with automated 3-stage scanning, replica environment testing, and intelligent PR creation.
 
-Teachers in government schools often lack interactive digital tools. Existing EdTech platforms require typing, internet-heavy setups, and English literacy — creating barriers in rural Hindi/Hinglish-speaking classrooms.
+### 1.1 What Makes NexCode Different
+Most AI coding tools stop at code generation. NexCode goes further:
+- **Inline ghost-text completions** (like Copilot)
+- **AI code generation** from comments or instructions
+- **Intelligent bug detection and fixing** with diff preview
+- **Pipeline integration** — connects to any company's CI/CD via MCP/JSON
+- **3-stage AI code scanning** before any PR is raised
+- **Replica environment testing** — never touches real production directly
 
-### Solution
+### 1.2 Target Users
 
-Shiksha AI removes these barriers with a **voice-first interface**. A teacher simply speaks a command like *"Explain photosynthesis in Hinglish for Class 6"* and instantly receives an AI-generated explanation on screen — with the option to have it read aloud.
-
-### Key Features
-
-| Feature | Description |
-|---------|-------------|
-| **Voice Command Interface** | Browser-native Web Speech API with silence detection and real-time transcript display |
-| **AI-Powered Explanations** | Cohere Command A+ generates grade-appropriate, multilingual explanations |
-| **Interactive Quiz Generation** | Auto-generated MCQs with timer, scoring, confetti animations, and sound feedback |
-| **Trilingual Support** | Full support for Hindi, English, and Hinglish (code-mixed) |
-| **Text-to-Speech Readback** | Browser Speech Synthesis API reads explanations aloud in the correct language |
-| **Session History** | Slide-out sidebar tracks all commands with one-click replay |
-| **Premium UI/UX** | Magnetic buttons, 3D tilt cards, custom cursor, waveform visualizer, and micro-animations |
-| **Health Monitoring** | Real-time backend connectivity status with auto-polling |
-
----
-
-## Core Architecture & Innovations
-
-### 1. Voice-First NLU Pipeline
-
-Shiksha AI implements a three-stage voice processing pipeline that converts raw speech into structured educational actions:
-
-```
-               
-  Web Speech    NLU Command       AI Content       Speech      
-  Recognition        Parser (Cohere)        Generation            Synthesis   
-  (Browser)          (Backend)              (Backend)             (Browser)   
-               
-     STT               Intent Extraction        Explanation/Quiz          TTS
-   (Client)              (Server)                 (Server)              (Client)
-```
-
-**Stage 1 — Speech-to-Text (Client-Side):**
-- Leverages the browser's native `webkitSpeechRecognition` API — zero external dependencies
-- Automatic silence detection (3s timeout) stops recording when the teacher pauses
-- Language-aware: `en-IN` for English/Hinglish, `hi-IN` for Hindi
-- Interim results displayed in real-time for immediate visual feedback
-
-**Stage 2 — NLU Command Parsing (Server-Side):**
-- Raw transcript is sent to Cohere's `command-a-plus` model for structured extraction
-- Extracts: `intent` (explain/quiz), `topic`, `grade`, and `language`
-- Robust JSON parsing with fallback handling — strips markdown fences, finds JSON boundaries
-- Graceful degradation: if parsing fails, defaults to explanation mode with raw text
-
-**Stage 3 — Content Generation (Server-Side):**
-- Context-aware prompts tuned for Haryana government school curriculum
-- Grade-appropriate language complexity (Class 1-12)
-- Enforced response length (≤150 words) for classroom attention spans
-- Structured MCQ generation with guaranteed JSON output format
-
-### 2. Hybrid Client-Server Architecture
-
-A deliberate architectural decision splits computation between client and server:
-
-| Concern | Runs On | Rationale |
-|---------|---------|-----------|
-| Speech Recognition | Client (Browser) | Zero latency, works offline for STT, no audio upload needed |
-| Command Parsing | Server (FastAPI) | Requires LLM inference via Cohere API |
-| Content Generation | Server (FastAPI) | Requires LLM inference via Cohere API |
-| Speech Synthesis | Client (Browser) | Native TTS, instant playback, no server roundtrip |
-| UI Rendering | Client (Next.js) | React 19 with server components for optimal bundle size |
-| State Management | Client (React) | `useState` + `useCallback` — intentionally lightweight, no Redux overhead |
-
-### 3. Interaction Design Innovations
-
-- **Magnetic Mic Button:** The microphone button gravitationally pulls toward the cursor within a defined radius, creating a playful, tactile interaction using calculated `translate()` transforms
-- **3D Tilt Cards:** Explanation cards respond to mouse movement with perspective-based 3D rotation via `useTilt` hook, creating a premium parallax effect
-- **Custom Cursor System:** Dual-layer cursor (dot + trailing outline) using `requestAnimationFrame` spring physics for smooth follow-through
-- **Web Audio Sound Effects:** Procedurally generated sound effects (pop, correct ding, wrong buzz) using the Web Audio API `OscillatorNode` — no audio files needed
-- **Waveform Visualizer:** Real-time audio visualization when the mic is active
+| User Type | Use Case | Key Feature |
+|-----------|----------|-------------|
+| **Individual Developers** | Faster coding with AI assistance | Completions + Generate + Fix |
+| **Engineering Teams** | Automated pre-PR code review | Pipeline Integration |
+| **Tech Companies** | Connect existing CI/CD to AI scanning | MCP Server + JSON Config |
+| **Open Source Maintainers** | Auto PR review and quality gates | 3-Stage Scan + GitHub PR Bot |
 
 ---
 
-## System Design
+## 2. Core Features
 
-### High-Level System Diagram
+### 2.1 Feature 1 — Inline Code Suggestion
+Ghost-text completions appear as you type, similar to GitHub Copilot. The extension uses VS Code's `InlineCompletionItemProvider` API with a 400ms debounce to avoid excessive API calls.
+
+> **HOW IT WORKS**: As you type, NexCode captures the last 50 lines of code as context and sends it to the FastAPI backend. Claude generates a natural continuation which appears as greyed-out ghost text. Press `Tab` to accept.
+
+- Triggered automatically on every keystroke (debounced 400ms)
+- Sends language ID + code prefix as context
+- `Tab` to accept, `Escape` to dismiss
+- Configurable via `nexcode.enableInlineCompletion` setting
+
+### 2.2 Feature 2 — Complete Code
+Select a comment, function signature, or natural language instruction. Run **NexCode: Generate Code** (`Ctrl+Shift+G`) and the AI writes the full implementation directly in the editor.
+
+> **HOW IT WORKS**: The selected text becomes the instruction. Claude generates a complete code block with comments. The result replaces the selection in-place — no separate panel needed.
+
+### 2.3 Feature 3 — Bug Fixing
+Select buggy or broken code. Run **NexCode: Fix Bug** (`Ctrl+Shift+F`). The AI analyses the code, identifies the issue, and proposes a corrected version shown as an inline diff for review before accepting.
+
+> **HOW IT WORKS**: Selected code is sent to the backend with a bug-fixing prompt. The response is shown via `vscode.diff()` as a side-by-side comparison. Developer accepts or rejects the fix.
+
+### 2.4 Feature 4 — Pipeline Integration *(Unique Feature)*
+This is what separates NexCode from every other AI coding tool. Connect to any company's CI/CD pipeline via a simple JSON config or MCP server. NexCode's AI agent (powered by Cohere) scans code through 3 stages before raising a PR.
+
+| Stage | Name | What the AI Checks | LLM Used |
+|-------|------|--------------------|----------|
+| **Stage 1** | Basic Bug Check | Null refs, undefined vars, type mismatches, obvious errors | Cohere Command-R+ |
+| **Stage 2** | Syntax & Keywords | Syntax correctness, deprecated APIs, banned keywords, standards | Cohere Command-R+ |
+| **Stage 3** | Full Scan + Run | Complete analysis + runs code in Docker replica environment | Cohere Command-R+ |
+| **Final** | PR Creation | Creates branch, raises PR with AI review summary, notifies dev | GitHub API Bot |
+
+---
+
+## 3. Architecture
+
+### 3.1 System Architecture
+NexCode follows a client-server architecture. The VS Code extension (TypeScript) is the client. The FastAPI server (Python) handles all LLM communication. The two communicate over HTTP on `localhost:8000`.
 
 ```mermaid
-graph TB
-    subgraph Client [" Frontend (Next.js 16 / React 19)"]
-        UI[Page Component]
-        VB[VoiceButton]
-        ED[ExplanationDisplay]
-        QD[QuizDisplay]
-        SH[SessionHistory]
-        
-        VB -->|transcript| UI
-        UI -->|explanation| ED
-        UI -->|quizData| QD
-        UI -->|history| SH
-    end
-
-    subgraph Server [" Backend (FastAPI)"]
-        API[API Router]
-        CS[CommandService]
-        AS[AIService]  
-        QS[QuizService]
-        
-        API --> CS
-        API --> AS
-        API --> QS
-    end
-
-    subgraph External [" External Services"]
-        CO[Cohere API<br/>command-a-plus]
-    end
-
-    UI -->|POST /command| API
-    UI -->|POST /explain| API
-    UI -->|POST /quiz| API
-    
-    CS -->|NLU Parse| CO
-    AS -->|Generate| CO
-    QS -->|Generate| CO
+graph LR
+    VS[VS Code Extension<br/>TypeScript] -->|REST / SSE| FA[FastAPI Backend<br/>Python + Uvicorn]
+    FA -->|Claude / Cohere APIs| LLM[LLM APIs]
+    FA -->|PR Bot| GH[GitHub API]
 ```
 
-### Request Flow — Explain Command
+### 3.2 API Routes
 
-```mermaid
-sequenceDiagram
-    actor Teacher
-    participant Browser as Browser (STT)
-    participant Next as Next.js Client
-    participant FastAPI as FastAPI Server
-    participant Cohere as Cohere API
-
-    Teacher->>Browser: Speaks "Explain gravity in Hindi"
-    Browser->>Next: transcript = "Explain gravity in Hindi"
-    
-    Note over Next: Silence detected → auto-stop
-
-    Next->>FastAPI: POST /command { text: "..." }
-    FastAPI->>Cohere: NLU extraction prompt
-    Cohere-->>FastAPI: { intent: "explain", topic: "gravity", language: "Hindi", grade: "6" }
-    FastAPI-->>Next: Parsed command JSON
-
-    Next->>FastAPI: POST /explain { topic, language, grade }
-    FastAPI->>Cohere: Teaching prompt (grade-aware)
-    Cohere-->>FastAPI: Explanation text
-    FastAPI-->>Next: { data: "गुरुत्वाकर्षण..." }
-
-    Next->>Browser: Typewriter render + optional TTS
-    Browser->>Teacher: Sees explanation + hears readback
-```
-
-### Data Flow — Quiz Generation
-
-```mermaid
-sequenceDiagram
-    participant Next as Next.js Client
-    participant FastAPI as FastAPI Server
-    participant Cohere as Cohere API
-
-    Next->>FastAPI: POST /quiz { topic: "photosynthesis" }
-    FastAPI->>Cohere: MCQ generation prompt
-    Cohere-->>FastAPI: JSON with 5 questions
-    
-    Note over FastAPI: Robust JSON parsing<br/>(handles markdown fences)
-    
-    FastAPI-->>Next: { questions: [...] }
-    
-    Note over Next: Timer starts (15s/question)<br/>Sound effects on answer<br/>Confetti on completion
-```
+| Method | Route | Description | LLM |
+|--------|-------|-------------|-----|
+| `POST` | `/complete` | Inline code completion (ghost text) | Claude |
+| `POST` | `/generate` | Generate code from instruction | Claude |
+| `POST` | `/fix` | Fix buggy code selection | Claude |
+| `POST` | `/explain` | Explain selected code in plain English | Claude |
+| `POST` | `/pipeline/scan` | Run 3-stage AI scan on code | Cohere |
+| `POST` | `/pipeline/pr` | Raise GitHub PR after scan passes | GitHub API |
+| `GET` | `/pipeline/status/{job_id}` | Check pipeline job status | — |
 
 ---
 
-## Tech Stack
+## 4. Technology Stack
 
-### Frontend
-
+### 4.1 Frontend — VS Code Extension
 | Technology | Version | Purpose |
-|-----------|---------|---------|
-| **Next.js** | 16.2.9 | React framework with App Router, Turbopack bundling |
-| **React** | 19.2.4 | Component architecture with hooks |
-| **CSS Modules** | — | Scoped, component-level styling with zero runtime |
-| **Web Speech API** | — | Browser-native speech recognition (STT) |
-| **Speech Synthesis API** | — | Browser-native text-to-speech (TTS) |
-| **Web Audio API** | — | Procedural sound effect generation |
+|------------|---------|---------|
+| **TypeScript** | 5.0+ | Extension language — type safety + VS Code API types |
+| **VS Code API** | 1.85+ | `InlineCompletionItemProvider`, commands, diff view, status bar |
+| **Webpack** | 5.0+ | Bundle TypeScript into single `dist/extension.js` file |
+| **vsce** | Latest | Package to `.vsix` and publish to VS Code Marketplace |
+| **ESLint + Prettier** | Latest | Code linting and formatting |
 
-### Backend
-
+### 4.2 Backend — FastAPI Server
 | Technology | Version | Purpose |
-|-----------|---------|---------|
-| **FastAPI** | Latest | High-performance async Python API framework |
-| **Uvicorn** | Latest | ASGI server with hot-reload |
-| **Cohere SDK** | Latest | LLM client for `command-a-plus-05-2026` model |
-| **Pydantic** | v2 | Request/response schema validation |
-| **SQLAlchemy** | Latest | ORM (database layer prepared for future use) |
-| **python-dotenv** | Latest | Environment variable management |
+|------------|---------|---------|
+| **Python** | 3.10+ | Backend language — best LLM SDK ecosystem |
+| **FastAPI** | 0.110+ | Async REST API framework with auto OpenAPI docs |
+| **Uvicorn** | 0.27+ | ASGI server — runs FastAPI with hot reload |
+| **Pydantic** | 2.0+ | Request/response validation and schemas |
+| **python-dotenv** | Latest | Load API keys from `.env` file safely |
 
-### DevOps
+### 4.3 AI / LLM Layer
+| Technology | Model | Used For |
+|------------|-------|----------|
+| **Anthropic Claude** | `claude-sonnet-4-20250514` | Completions, code generation, bug fixing, explanation |
+| **Cohere** | `command-r-plus` | Pipeline AI agent — 3-stage code scanning |
+| **Streaming (SSE)** | `FastAPI StreamingResponse` | Token-by-token output for better UX |
 
+### 4.4 Pipeline & Infrastructure
 | Technology | Purpose |
-|-----------|---------|
-| **Docker** | Containerized backend deployment |
-| **ESLint** | Frontend code quality enforcement |
-| **Git** | Version control |
+|------------|---------|
+| **PyGithub** | Create branches and raise PRs automatically via GitHub API |
+| **Docker** | Spin up replica sandbox environment for Stage 3 testing |
+| **Celery + Redis** | Job queue system for async pipeline stage processing |
+| **httpx** | Async HTTP client for MCP server connections |
+| **MCP Server (JSON)**| Connect to company cloud infrastructure via config file |
+| **Vercel API** | Deployment integration after PR is merged |
 
 ---
 
-## Project Structure
+## 5. Project Structure
 
-```
-shiksha-ai/
+The project is split into two completely separate folders: `frontend` (VS Code extension in TypeScript) and `backend` (FastAPI server in Python). This clean separation makes it easy to develop, test, and deploy each independently.
 
-  Readme.md                          # This file
-
-  backend/                           # FastAPI Backend Service
-    Dockerfile                        # Container configuration
-    requirements.txt                  # Python dependencies
-    .env                              # Environment secrets (git-ignored)
-    .gitignore
-   
-    app/                              # Application package
-        main.py                       # FastAPI app entry point, CORS config
-       
-        api/
-           routes.py                 # REST endpoint definitions (/explain, /quiz, /command)
-       
-        services/                     # Business logic layer
-           ai_service.py             # Topic explanation generation via Cohere
-           command_service.py        # NLU voice command parsing via Cohere
-           quiz_service.py           # MCQ quiz generation via Cohere
-       
-        schemas/                      # Pydantic request/response models
-           command.py                # CommandRequest { text }
-           question.py               # ExplainRequest { topic, language, grade }
-           quiz.py                   # QuizRequest { topic }
-       
-        core/                         # Configuration & clients
-           config.py                 # Environment variable loader
-           cohere_client.py          # Cohere ClientV2 singleton
-       
-        models/
-           history.py                # SQLAlchemy models (future: persist sessions)
-       
-        database/
-            database.py               # Database connection setup
-
-  frontend/                          # Next.js Frontend Application
-     package.json                      # Node dependencies & scripts
-     next.config.mjs                   # Next.js configuration
-     eslint.config.mjs                 # ESLint rules
-     jsconfig.json                     # Path aliases (@/ → src/)
-     .env.local                        # Frontend environment (API URL)
-     .gitignore
-    
-     public/                           # Static assets
-        favicon.ico
-    
-     src/
-         app/                          # Next.js App Router
-            layout.js                 # Root layout (metadata, custom cursor, fonts)
-            page.js                   # Main page (state management, command orchestration)
-            globals.css               # Global design tokens, split layout, animations
-            favicon.ico
-        
-         components/                   # UI Components (CSS Modules)
-            Header.js                 # Navigation bar (mode toggle, language/grade selects, health status)
-            Header.module.css
-            VoiceButton.js            # Mic button with magnetic effect, rings, waveform
-            VoiceButton.module.css
-            WaveformVisualizer.js     # Real-time audio waveform animation
-            WaveformVisualizer.module.css
-            ExplanationDisplay.js     # Explanation card with typewriter, TTS, 3D tilt
-            ExplanationDisplay.module.css
-            QuizDisplay.js            # Quiz card with timer, scoring, confetti
-            QuizDisplay.module.css
-            SessionHistory.js         # Slide-out history sidebar with replay
-            SessionHistory.module.css
-            CustomCursor.js           # Custom dual-layer cursor (dot + outline)
-            CustomCursor.module.css
-        
-         hooks/                        # Custom React Hooks
-            useVoiceRecognition.js    # Web Speech API wrapper with silence detection
-            useSpeechSynthesis.js     # Text-to-speech with voice matching
-            useSoundEffects.js        # Web Audio API procedural sounds
-            useTilt.js                # 3D perspective tilt effect
-        
-         lib/
-             api.js                    # Backend API client (fetch wrappers)
+```text
+NEXCODE/
+├── frontend/                     # VS Code Extension (TypeScript)
+│   ├── src/
+│   │   ├── extension.ts          # Entry point — activate(), register all
+│   │   ├── completionProvider.ts # Ghost-text inline completions
+│   │   ├── codeActions.ts        # Generate, fix, explain commands
+│   │   ├── apiClient.ts          # HTTP calls to FastAPI backend
+│   │   ├── diffView.ts           # Diff preview before accepting AI fix
+│   │   ├── statusBar.ts          # AI status bar indicator
+│   │   └── config.ts             # Read workspace settings
+│   ├── media/icon.png            # 128x128 marketplace icon
+│   ├── test/extension.test.ts    # Unit tests
+│   ├── package.json              # Contributes, commands, keybindings
+│   ├── tsconfig.json             # TypeScript compiler config
+│   ├── webpack.config.js         # Bundle to dist/extension.js
+│   └── CHANGELOG.md              # Required by vsce to publish
+│
+├── backend/                      # FastAPI Server (Python)
+│   ├── app/
+│   │   ├── main.py               # All API routes
+│   │   ├── llm.py                # Anthropic Claude abstraction
+│   │   ├── prompts.py            # System prompts per feature
+│   │   ├── schemas.py            # Pydantic request/response models
+│   │   ├── streaming.py          # StreamingResponse helpers
+│   │   │
+│   │   ├── pipeline/             # Pipeline feature (NEW)
+│   │   │   ├── agent.py          # Cohere AI agent coordinator
+│   │   │   ├── stage1_bugs.py    # Stage 1: basic bug check
+│   │   │   ├── stage2_syntax.py  # Stage 2: syntax + keywords
+│   │   │   ├── stage3_run.py     # Stage 3: replica run
+│   │   │   ├── github_pr.py      # Raise PR via PyGithub
+│   │   │   ├── mcp_connect.py    # MCP server connector
+│   │   │   └── queue.py          # Celery job queue
+│   │   │
+│   │   └── sandbox/              # Docker replica env (NEW)
+│   │       ├── Dockerfile.sandbox
+│   │       └── runner.py         # Spin up + run code safely
+│   │
+│   ├── tests/test_routes.py
+│   ├── requirements.txt
+│   ├── .env                      # API keys (never commit)
+│   └── Dockerfile                # Deploy to Railway/Render
+│
+├── nexcode.config.json           # Company credentials + MCP config
+├── .gitignore
+└── README.md
 ```
 
 ---
 
-## Getting Started
+## 6. Pipeline Integration — Deep Dive
 
-### Prerequisites
+### 6.1 How the Pipeline Works
+The pipeline is the unique differentiator of NexCode. Instead of just writing code, NexCode helps ship code safely by running it through 3 AI-powered stages before any PR reaches the real repository.
 
-| Requirement | Version | Check Command |
-|-------------|---------|---------------|
-| **Node.js** | ≥ 18.0 | `node --version` |
-| **Python** | ≥ 3.11 | `python --version` |
-| **pip** | Latest | `pip --version` |
-| **npm** | ≥ 9.0 | `npm --version` |
-| **Cohere API Key** | — | [Get one here](https://dashboard.cohere.com/api-keys) |
+- ⚙️ **Connect via JSON / MCP Server**: Company provides `nexcode.config.json` with their GitHub token, MCP server URL, and cloud credentials. NexCode reads this to connect to their existing pipeline infrastructure.
+- 1️⃣ **Stage 1 — Basic Bug Check (Cohere LLM)**: Cohere agent does a fast scan for obvious bugs: null references, undefined variables, type mismatches, unreachable code, and missing error handling. Returns pass/fail with specific line numbers.
+- 2️⃣ **Stage 2 — Syntax & Keywords Check (Cohere LLM)**: Deep analysis of syntax correctness, deprecated API usage, banned keywords, and company-specific coding standards. LLM cross-references standards if provided in config.
+- 3️⃣ **Stage 3 — Full Scan + Replica Run (Docker)**: Complete code analysis. A Docker sandbox spins up as a replica environment, the code runs on localhost, outputs and errors are captured. Only if this passes does it proceed.
+- ✅ **PR Raised — NexCode Bot Commits**: NexCode bot creates a new branch (never commits to `main` directly), raises a PR with a full AI-generated review summary, and notifies the developer via VS Code notification. Developer is always the final approver.
 
-### Installation & Setup
-
-#### 1. Clone the Repository
-
-```bash
-git clone https://github.com/your-org/shiksha-ai.git
-cd shiksha-ai
+### 6.2 `nexcode.config.json` Format
+```json
+{
+  "mcp_server": "https://mcp.yourcompany.com/sse",
+  "github": {
+    "repo": "org/repo-name",
+    "token": "ghp_xxxxxxxxxxxx",
+    "base_branch": "main"
+  },
+  "deployment": {
+    "provider": "vercel",
+    "token": "vc_xxxxxxxxxxxx"
+  },
+  "llm": {
+    "provider": "cohere",
+    "model": "command-r-plus"
+  },
+  "standards": {
+    "banned_keywords": ["eval", "exec"],
+    "max_function_lines": 50
+  }
+}
 ```
 
-#### 2. Backend Setup
+---
 
-```bash
-# Navigate to backend
-cd backend
+## 7. Setup & Installation
 
-# Create and activate virtual environment
-python -m venv venv
+### 7.1 Prerequisites
+| Tool | Version | Purpose |
+|------|---------|---------|
+| **Node.js** | 18+ | Frontend |
+| **Python** | 3.10+ | Backend |
+| **VS Code** | 1.85+ | Extension execution |
+| **Docker Desktop** | Latest | Stage 3 sandbox testing |
+| **Redis** | 7+ | Celery job queue |
+| **Anthropic API Key** | — | Core code completion |
+| **Cohere API Key** | — | Pipeline agent |
+| **GitHub Token** | — | PR creation |
 
-# Windows
-venv\Scripts\activate
-
-# macOS/Linux
-source venv/bin/activate
-
+### 7.2 Frontend Setup (PowerShell — Windows)
+```powershell
+cd C:\Users\HP\Desktop\Nexcode\frontend
+ 
 # Install dependencies
-pip install -r requirements.txt
-```
-
-#### 3. Frontend Setup
-
-```bash
-# Navigate to frontend (from project root)
-cd frontend
-
-# Install Node dependencies
 npm install
+ 
+# Compile TypeScript
+npm run compile
+ 
+# Press F5 in VS Code to launch Extension Development Host
+# Open Command Palette (Ctrl+Shift+P) -> type "NexCode"
 ```
 
-#### 4. Configure Environment Variables
-
-**Backend** — Create `backend/.env`:
-```env
-COHERE_API_KEY=your_cohere_api_key_here
-```
-
-**Frontend** — Create `frontend/.env.local`:
-```env
-NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
-```
-
-#### 5. Run the Application
-
-**Terminal 1 — Start Backend:**
-```bash
-cd backend
+### 7.3 Backend Setup
+```powershell
+cd C:\Users\HP\Desktop\Nexcode\backend
+ 
+# Create virtual environment
+python -m venv venv
+venv\Scripts\activate
+ 
+# Install all dependencies
+pip install fastapi uvicorn anthropic cohere PyGithub docker celery redis httpx python-dotenv pydantic
+ 
+# Create .env file and add your keys:
+# ANTHROPIC_API_KEY=sk-ant-...
+# COHERE_API_KEY=...
+# GITHUB_TOKEN=ghp_...
+ 
+# Start the server
 uvicorn app.main:app --reload --port 8000
 ```
 
-**Terminal 2 — Start Frontend:**
-```bash
-cd frontend
-npm run dev
-```
+---
 
-#### 6. Access the Application
+## 8. Keyboard Shortcuts & Commands
 
-| Service | URL |
-|---------|-----|
-| **Frontend** | http://localhost:3000 |
-| **Backend API** | http://localhost:8000 |
-| **API Docs (Swagger)** | http://localhost:8000/docs |
-| **API Docs (ReDoc)** | http://localhost:8000/redoc |
+| Command | Shortcut | Description |
+|---------|----------|-------------|
+| **NexCode: Generate Code** | `Ctrl + Shift + G` | Generate code from selected comment/instruction |
+| **NexCode: Fix Bug** | `Ctrl + Shift + F` | Fix selected buggy code with diff preview |
+| **NexCode: Explain Code** | `Ctrl + Shift + E` | Explain selected code in plain English |
+| **NexCode: Run Pipeline** | `Ctrl + Shift + P` | Run 3-stage scan and raise PR |
+| **Accept Completion** | `Tab` | Accept ghost-text inline suggestion |
+| **Dismiss Completion** | `Escape` | Dismiss ghost-text suggestion |
 
 ---
 
-## Environment Variables
+## 9. Recommended Build Order
 
-### Backend (`backend/.env`)
+Build NexCode incrementally. Don't try to build everything at once — complete each phase before moving to the next.
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `COHERE_API_KEY` |  | API key from [Cohere Dashboard](https://dashboard.cohere.com/api-keys) |
+| Phase | What to Build | Estimated Time |
+|-------|---------------|----------------|
+| **Phase 1 — MVP** | Backend `/explain` route + Extension `explainCode` command + `apiClient.ts` | 1-2 days |
+| **Phase 2 — Core** | Add `/complete`, `/generate`, `/fix` routes + `completionProvider.ts` + `codeActions.ts` | 2-3 days |
+| **Phase 3 — Polish** | `diffView.ts`, `statusBar.ts`, `config.ts`, keyboard shortcuts, error handling | 1-2 days |
+| **Phase 4 — Pipeline**| `stage1_bugs.py` + `stage2_syntax.py` + `github_pr.py` + Celery queue | 3-4 days |
+| **Phase 5 — Sandbox** | Docker sandbox + `stage3_run.py` + `runner.py` replica environment | 2-3 days |
+| **Phase 6 — Deploy** | MCP connect + Vercel API + `.vsix` packaging + Marketplace publish | 1-2 days |
 
-### Frontend (`frontend/.env.local`)
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `NEXT_PUBLIC_API_URL` |  | `http://127.0.0.1:8000` | Backend API base URL |
+> **PRO TIP**: Start with the `/explain` endpoint and `explainCode` command. It's the simplest (no streaming, no diff view) and gives you a working end-to-end proof of concept in a few hours. Build confidence before tackling the pipeline.
 
 ---
 
-## API Reference
+## 10. Dependencies
 
-### Base URL
-
+### 10.1 `backend/requirements.txt`
+```text
+fastapi==0.110.0
+uvicorn==0.27.0
+anthropic==0.21.0
+cohere==5.1.0
+PyGithub==2.2.0
+docker==7.0.0
+celery==5.3.0
+redis==5.0.0
+httpx==0.27.0
+python-dotenv==1.0.0
+pydantic==2.6.0
 ```
-http://localhost:8000
-```
 
-### Endpoints
-
-#### `GET /`
-
-Health check endpoint.
-
-**Response:**
+### 10.2 `frontend/package.json` devDependencies
 ```json
 {
-  "message": "ShikshaAI Backend Running"
+  "@types/vscode": "^1.85.0",
+  "typescript": "^5.0.0",
+  "webpack": "^5.0.0",
+  "webpack-cli": "^5.0.0",
+  "ts-loader": "^9.0.0",
+  "@vscode/vsce": "^2.24.0",
+  "eslint": "^8.0.0"
 }
 ```
 
 ---
 
-#### `POST /command`
+## 11. Publishing to VS Code Marketplace
 
-Parses a natural language voice command into structured intent data using Cohere NLU.
+1. Create publisher at [marketplace.visualstudio.com/manage](https://marketplace.visualstudio.com/manage)
+2. Generate Personal Access Token on Azure DevOps
+3. Login: `vsce login your-publisher-id`
+4. Add `icon.png` (128x128) to `frontend/media/`
+5. Fill in `CHANGELOG.md` and `README.md`
+6. Package: `npm run package` (creates `.vsix` file)
+7. Publish: `vsce publish`
 
-**Request:**
-```json
-{
-  "text": "Explain photosynthesis in Hindi for class 8"
-}
-```
+> **LOCAL INSTALL**: To test locally before publishing: `code --install-extension nexcode-0.1.0.vsix` or drag the `.vsix` file into the VS Code Extensions panel.
 
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "intent": "explain",
-    "topic": "photosynthesis",
-    "grade": "8",
-    "language": "Hindi"
-  }
-}
-```
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `intent` | `string` | `"explain"` or `"quiz"` |
-| `topic` | `string` | Extracted educational topic |
-| `grade` | `string` | Class level (1-12) |
-| `language` | `string` | `"Hindi"`, `"English"`, or `"Hinglish"` |
+### 11.1 Marketplace Checklist
+- [ ] `README.md` with screenshots or GIFs (listings with GIFs convert much better)
+- [ ] `CHANGELOG.md` — required by vsce
+- [ ] `icon.png` — 128x128px, set in `package.json` under `icon`
+- [ ] Categories: `["AI", "Other"]` in `package.json`
+- [ ] Keywords for discoverability: `["ai", "copilot", "code completion", "pipeline"]`
+- [ ] License file
+- [ ] GitHub repository linked in `package.json` under `repository`
 
 ---
-
-#### `POST /explain`
-
-Generates a grade-appropriate, multilingual explanation for a given topic.
-
-**Request:**
-```json
-{
-  "topic": "photosynthesis",
-  "language": "Hinglish",
-  "grade": "6"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": "Photosynthesis ek aisa process hai jisme plants sunlight use karke apna food banate hain..."
-}
-```
-
----
-
-#### `POST /quiz`
-
-Generates 5 multiple-choice questions for a given topic.
-
-**Request:**
-```json
-{
-  "topic": "photosynthesis"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "questions": [
-      {
-        "question": "What is the primary pigment in photosynthesis?",
-        "options": ["Chlorophyll", "Hemoglobin", "Melanin", "Keratin"],
-        "answer": "Chlorophyll"
-      }
-    ]
-  }
-}
-```
-
----
-
-## Frontend Component Architecture
-
-### Component Hierarchy
-
-```
-RootLayout
- CustomCursor                    # Global custom cursor overlay
- Home (page.js)                  # Main application state manager
-     Header                      # Navigation + controls
-        Mode Toggle (Explain/Quiz)
-        Language Selector
-        Grade Selector
-        Health Status Indicator
-    
-     Split Layout
-        VoiceButton             # Left panel
-           Magnetic Area
-           Animated Rings (×3)
-           Mic Button
-           WaveformVisualizer
-           Status Text
-           Transcript Display
-       
-        Output Panel            # Right panel
-            ExplanationDisplay
-               Topic Header + Badges
-               Typewriter Text
-               Speak / Dismiss Actions
-           
-            QuizDisplay
-                Progress Bar
-                Timer (SVG circle)
-                Options Grid (2×2)
-                Results Card + Confetti
-    
-     SessionHistory              # Slide-out sidebar
-         History Items (clickable replay)
-```
-
-### State Management
-
-All application state is co-located in `page.js` using React hooks — intentionally avoiding external state libraries:
-
-```javascript
-// Core UI State
-const [mode, setMode]               = useState("explain")     // Current mode
-const [language, setLanguage]       = useState("Hinglish")    // Selected language
-const [grade, setGrade]             = useState("6")           // Selected grade
-const [isProcessing, setIsProcessing] = useState(false)       // Loading state
-
-// Content State
-const [explanation, setExplanation] = useState(null)           // AI explanation text
-const [quizData, setQuizData]       = useState(null)           // Quiz questions array
-const [history, setHistory]         = useState([])             // Session history log
-```
-
----
-
-## Custom Hooks Reference
-
-### `useVoiceRecognition({ lang, silenceTimeout })`
-
-Wraps the Web Speech API with auto-silence detection.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `lang` | `string` | `"hi-IN"` | Recognition language (`en-IN`, `hi-IN`) |
-| `silenceTimeout` | `number` | `3000` | Milliseconds of silence before auto-stop |
-
-**Returns:**
-| Property | Type | Description |
-|----------|------|-------------|
-| `isListening` | `boolean` | Whether recognition is active |
-| `transcript` | `string` | Interim (partial) transcript |
-| `finalTranscript` | `string` | Finalized transcript |
-| `isSupported` | `boolean` | Browser compatibility flag |
-| `startListening` | `function` | Start recording |
-| `stopListening` | `function` | Stop recording |
-| `resetTranscript` | `function` | Clear transcript state |
-
----
-
-### `useSpeechSynthesis()`
-
-Text-to-speech with automatic voice matching.
-
-**Returns:**
-| Property | Type | Description |
-|----------|------|-------------|
-| `speak(text, lang)` | `function` | Speak text in the given language |
-| `stop()` | `function` | Cancel speech |
-| `pause()` / `resume()` | `function` | Pause/resume speech |
-| `isSpeaking` | `boolean` | Whether TTS is active |
-
----
-
-### `useSoundEffects()`
-
-Procedural sound generation using Web Audio API oscillators.
-
-**Returns:**
-| Method | Sound | Use Case |
-|--------|-------|----------|
-| `playPop()` | Short sine sweep (400→100Hz) | Button clicks, mode changes |
-| `playCorrect()` | Two-tone ding (C5→E5) | Correct quiz answer |
-| `playWrong()` | Triangle wave drop (200→100Hz) | Wrong quiz answer |
-
----
-
-### `useTilt({ max, perspective, scale })`
-
-Applies a 3D perspective tilt effect to any element.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `max` | `number` | `15` | Maximum tilt angle in degrees |
-| `perspective` | `number` | `1000` | CSS perspective value |
-| `scale` | `number` | `1.02` | Scale on hover |
-
----
-
-## Design System
-
-### Color Tokens
-
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--primary` | `#ED0331` | Masai Red — CTA buttons, active states |
-| `--primary-dark` | `#C90026` | Hover states, active mic |
-| `--primary-light` | `#F6D9DF` | Badges, selections |
-| `--bg-dark` | `#0A0103` | Hero/header background |
-| `--bg-primary` | `#FFFFFF` | Card backgrounds |
-| `--success` | `#10b981` | Correct answers |
-| `--danger` | `#ef4444` | Wrong answers, errors |
-
-### Typography
-
-- **Font Family:** `Poppins` (400, 500, 600, 700, 800)
-- **Loaded via:** Google Fonts CDN
-
-### Border Radii
-
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--radius-card` | `48px` | Main cards |
-| `--radius-subcard` | `24px` | Inner elements, option buttons |
-| `--radius-pill` | `999px` | Badges, buttons, pills |
-
-### Animations
-
-| Animation | Duration | Usage |
-|-----------|----------|-------|
-| `fadeInDown` | 0.8s | Hero content entrance |
-| `ringPulse` | 3s (infinite) | Idle mic rings |
-| `ringPulseActive` | 1.2s (infinite) | Active mic rings |
-| `slideUp` | 0.6s | Card entrance |
-| `floatIcon` | 3s (infinite) | Placeholder icon |
-| `confettiFall` | variable | Quiz completion celebration |
-
----
-
-## Deployment
-
-### Docker (Backend)
-
-```bash
-cd backend
-
-# Build the image
-docker build -t shiksha-ai-backend .
-
-# Run the container
-docker run -d \
-  --name shiksha-backend \
-  -p 7860:7860 \
-  -e COHERE_API_KEY=your_key_here \
-  shiksha-ai-backend
-```
-
-### Frontend Production Build
-
-```bash
-cd frontend
-
-# Build optimized production bundle
-npm run build
-
-# Start production server
-npm start
-```
-
-### Production Architecture
-
-```
-                    
-                       Reverse Proxy  
-                       (Nginx/Caddy) 
-                    
-                            
-              
-                                         
-             
-       Next.js Server           FastAPI Server  
-        (Port 3000)              (Port 7860)    
-                                                
-       Static Assets            /explain        
-       SSR Pages                /quiz           
-       React Client             /command         
-             
-                                         
-                                
-                                   Cohere API    
-                                  (External)     
-                                
-```
-
----
-
-## Performance Considerations
-
-| Area | Optimization |
-|------|-------------|
-| **Bundle Size** | Zero external UI libraries — pure CSS Modules, no Tailwind/Bootstrap runtime |
-| **Speech Processing** | Client-side STT/TTS eliminates audio upload latency |
-| **Sound Effects** | Procedurally generated via Web Audio API — no audio file downloads |
-| **Animations** | Hardware-accelerated CSS (`transform`, `opacity`) — no JS animation libraries |
-| **Cursor Physics** | `requestAnimationFrame` loop — 60fps smooth tracking |
-| **API Calls** | Minimal payload sizes (JSON only, ≤150 word responses) |
-| **Font Loading** | Google Fonts with `display=swap` — non-blocking |
-
----
-
-## Contributing
-
-### Development Workflow
-
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/voice-commands-v2`)
-3. **Commit** with conventional commits (`git commit -m "feat: add regional language support"`)
-4. **Push** to your branch (`git push origin feature/voice-commands-v2`)
-5. **Open** a Pull Request
-
-### Code Standards
-
-- **Frontend:** ESLint with Next.js config. Run `npm run lint` before pushing
-- **Backend:** Follow PEP 8. Use type hints for all function signatures
-- **CSS:** Use CSS Modules (`.module.css`). No inline styles except dynamic values
-- **Commits:** Follow [Conventional Commits](https://www.conventionalcommits.org/)
-
----
-
-## License
-
-This project is licensed under the **Apache License 2.0** — see the [LICENSE](LICENSE) file for details.
-
----
-
 <div align="center">
-
-**Built with  for Indian Classrooms**
-
-*Shiksha AI — Kyunki har bachche ka haq hai acchi education* 
-
+<b>NexCode AI Extension</b><br/>
+<i>TypeScript  •  FastAPI  •  Anthropic Claude  •  Cohere  •  GitHub API  •  Docker</i><br/>
+Build it phase by phase. Start with /explain. Ship something real.
 </div>
