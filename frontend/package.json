@@ -1,0 +1,90 @@
+{
+  "name": "nexcode",
+  "displayName": "NexCode",
+  "description": "AI coding helper that connects VS Code to the NexCode backend.",
+  "version": "0.0.1",
+  "publisher": "nexcode",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:nexcode.explainCode",
+    "onCommand:nexcode.fixCode",
+    "onCommand:nexcode.generateCode",
+    "onCommand:nexcode.reviewCode"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "NexCode",
+      "properties": {
+        "nexcode.backendUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:8000",
+          "description": "Base URL of the NexCode FastAPI backend."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "nexcode.explainCode",
+        "title": "NexCode: Explain Code"
+      },
+      {
+        "command": "nexcode.fixCode",
+        "title": "NexCode: Fix Code"
+      },
+      {
+        "command": "nexcode.generateCode",
+        "title": "NexCode: Generate Code"
+      },
+      {
+        "command": "nexcode.reviewCode",
+        "title": "NexCode: Review Code"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "nexcode.explainCode",
+          "group": "navigation@10"
+        },
+        {
+          "command": "nexcode.fixCode",
+          "group": "navigation@11"
+        },
+        {
+          "command": "nexcode.reviewCode",
+          "group": "navigation@12"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "nexcode.explainCode"
+        },
+        {
+          "command": "nexcode.fixCode"
+        },
+        {
+          "command": "nexcode.generateCode"
+        },
+        {
+          "command": "nexcode.reviewCode"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "npm run compile"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "@types/vscode": "^1.90.0",
+    "typescript": "^5.5.4"
+  }
+}
