@@ -110,30 +110,6 @@ function activate(context) {
             await vscode.window.showTextDocument(document, { preview: false });
         }
     }));
-    context.subscriptions.push(vscode.commands.registerCommand("nexcode.reviewCode", async () => {
-        const code = getSelectedOrFullText();
-        if (!code) {
-            return;
-        }
-        const review = await runWithProgress("NexCode is reviewing your code...", () => (0, apiClient_1.reviewCode)(code));
-        if (review) {
-            await (0, diffView_1.showMarkdownResult)("NexCode Review", [
-                "# NexCode Review",
-                "",
-                "## Bugs",
-                review.bugs,
-                "",
-                "## Syntax",
-                review.syntax,
-                "",
-                "## Runtime",
-                review.runtime,
-                "",
-                "## Summary",
-                review.summary,
-            ].join("\n"));
-        }
-    }));
     context.subscriptions.push(vscode.languages.registerCodeActionsProvider({ scheme: "file" }, new codeActions_1.NexCodeActionProvider(), {
         providedCodeActionKinds: [
             vscode.CodeActionKind.QuickFix,

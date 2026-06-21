@@ -38,18 +38,20 @@ const vscode = __importStar(require("vscode"));
 const apiClient_1 = require("./apiClient");
 class NexCodeCompletionProvider {
     async provideInlineCompletionItems(document, position) {
-        const line = document.lineAt(position.line).text.trim();
-        if (!line.startsWith("// nexcode:") && !line.startsWith("# nexcode:")) {
+        // Provide ghost text completion using the text before the cursor
+        const codeContext = document.getText(new vscode.Range(new vscode.Position(0, 0), position));
+        if (!codeContext.trim()) {
             return [];
         }
-        const prompt = line.replace(/^\/\/ nexcode:\s*/, "").replace(/^# nexcode:\s*/, "");
-        if (!prompt) {
+        try {
+            const code = await (0, apiClient_1.completeCode)(codeContext);
+            return [
+                new vscode.InlineCompletionItem(code, new vscode.Range(position, position)),
+            ];
+        }
+        catch {
             return [];
         }
-        const code = await (0, apiClient_1.generateCode)(prompt);
-        return [
-            new vscode.InlineCompletionItem(code, new vscode.Range(position, position)),
-        ];
     }
 }
 exports.NexCodeCompletionProvider = NexCodeCompletionProvider;

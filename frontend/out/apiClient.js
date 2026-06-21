@@ -37,7 +37,7 @@ exports.checkHealth = checkHealth;
 exports.explainCode = explainCode;
 exports.fixCode = fixCode;
 exports.generateCode = generateCode;
-exports.reviewCode = reviewCode;
+exports.completeCode = completeCode;
 const http = __importStar(require("http"));
 const https = __importStar(require("https"));
 const url_1 = require("url");
@@ -102,7 +102,8 @@ async function generateCode(prompt) {
     const response = await requestJson("POST", "/generate", { prompt });
     return response.code;
 }
-async function reviewCode(code) {
-    return requestJson("POST", "/review", { code });
+async function completeCode(code) {
+    const response = await requestJson("POST", "/complete", { code });
+    return response.code;
 }
 //# sourceMappingURL=apiClient.js.map

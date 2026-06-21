@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { explainCode, fixCode, generateCode, reviewCode } from "./apiClient";
+import { explainCode, fixCode, generateCode } from "./apiClient";
 import { NexCodeActionProvider } from "./codeActions";
 import { NexCodeCompletionProvider } from "./completionProvider";
 import { showFixedCode, showMarkdownResult } from "./diffView";
@@ -105,39 +105,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
-  context.subscriptions.push(
-    vscode.commands.registerCommand("nexcode.reviewCode", async () => {
-      const code = getSelectedOrFullText();
-      if (!code) {
-        return;
-      }
 
-      const review = await runWithProgress("NexCode is reviewing your code...", () =>
-        reviewCode(code),
-      );
-
-      if (review) {
-        await showMarkdownResult(
-          "NexCode Review",
-          [
-            "# NexCode Review",
-            "",
-            "## Bugs",
-            review.bugs,
-            "",
-            "## Syntax",
-            review.syntax,
-            "",
-            "## Runtime",
-            review.runtime,
-            "",
-            "## Summary",
-            review.summary,
-          ].join("\n"),
-        );
-      }
-    }),
-  );
 
   context.subscriptions.push(
     vscode.languages.registerCodeActionsProvider(

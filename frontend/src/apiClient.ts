@@ -5,13 +5,6 @@ import { getBackendUrl } from "./config";
 
 type HttpMethod = "GET" | "POST";
 
-export interface ReviewResponse {
-  bugs: string;
-  syntax: string;
-  runtime: string;
-  summary: string;
-}
-
 function requestJson<T>(method: HttpMethod, path: string, body?: unknown): Promise<T> {
   const url = new URL(`${getBackendUrl()}${path}`);
   const payload = body ? JSON.stringify(body) : undefined;
@@ -86,6 +79,7 @@ export async function generateCode(prompt: string): Promise<string> {
   return response.code;
 }
 
-export async function reviewCode(code: string): Promise<ReviewResponse> {
-  return requestJson<ReviewResponse>("POST", "/review", { code });
+export async function completeCode(code: string): Promise<string> {
+  const response = await requestJson<{ code: string }>("POST", "/complete", { code });
+  return response.code;
 }
