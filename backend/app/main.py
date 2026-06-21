@@ -1,10 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
 from app.llm import get_cohere_response
-from app.pipeline.agent import review_code_pipeline
 from app.schemas import CodeRequest, PromptRequest
-from app.streaming import stream_ai_response
 
 app = FastAPI()
 
@@ -55,14 +52,10 @@ async def fix_code(request: CodeRequest):
     return {"fixed_code": fixed_code}
 
 
-@app.post("/review")
-async def review_code(request: CodeRequest):
-    return review_code_pipeline(request.code)
-
-
-@app.post("/stream/{feature_type}")
-async def stream_response(feature_type: str, request: CodeRequest):
-    return StreamingResponse(
-        stream_ai_response(request.code, feature_type),
-        media_type="text/event-stream",
+@app.post("/complete")
+async def complete_code(request: CodeRequest):
+    code = get_cohere_response(
+        request.code,
+        feature_type="complete"
     )
+    return {"code": code}

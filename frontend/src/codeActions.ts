@@ -17,15 +17,6 @@ export class NexCodeActionProvider implements vscode.CodeActionProvider {
       title: "Fix Code",
     };
 
-    const reviewAction = new vscode.CodeAction(
-      "NexCode: Review Code",
-      vscode.CodeActionKind.RefactorRewrite,
-    );
-    reviewAction.command = {
-      command: "nexcode.reviewCode",
-      title: "Review Code",
-    };
-
-    return [explainAction, fixAction, reviewAction];
+    return [explainAction, fixAction];
   }
 }

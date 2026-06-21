@@ -1,29 +1,30 @@
 import * as vscode from "vscode";
-import { generateCode } from "./apiClient";
+import { completeCode } from "./apiClient";
 
 export class NexCodeCompletionProvider implements vscode.InlineCompletionItemProvider {
   async provideInlineCompletionItems(
     document: vscode.TextDocument,
     position: vscode.Position,
   ): Promise<vscode.InlineCompletionItem[]> {
-    const line = document.lineAt(position.line).text.trim();
+    // Provide ghost text completion using the text before the cursor
+    const codeContext = document.getText(
+      new vscode.Range(new vscode.Position(0, 0), position)
+    );
 
-    if (!line.startsWith("// nexcode:") && !line.startsWith("# nexcode:")) {
+    if (!codeContext.trim()) {
       return [];
     }
 
-    const prompt = line.replace(/^\/\/ nexcode:\s*/, "").replace(/^# nexcode:\s*/, "");
-
-    if (!prompt) {
+    try {
+      const code = await completeCode(codeContext);
+      return [
+        new vscode.InlineCompletionItem(
+          code,
+          new vscode.Range(position, position),
+        ),
+      ];
+    } catch {
       return [];
     }
-
-    const code = await generateCode(prompt);
-    return [
-      new vscode.InlineCompletionItem(
-        code,
-        new vscode.Range(position, position),
-      ),
-    ];
   }
 }
