@@ -170,6 +170,13 @@ npm run dev
 ## USER REQUIREMENT:
 
 """,
+    "test-complete": """You are an expert full-stack developer. The user wants you to generate a project.
+Because this is a test run, ONLY output the folder structure and very short stubs/placeholders for the code. DO NOT write complete file contents. Keep the response as short as possible to test the API endpoint quickly.
+
+---
+
+## USER REQUIREMENT:
+""",
 }
 
 

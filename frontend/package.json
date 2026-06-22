@@ -14,10 +14,29 @@
     "onCommand:nexcode.explainCode",
     "onCommand:nexcode.fixCode",
     "onCommand:nexcode.generateCode",
+    "onCommand:nexcode.generateProject",
     "onCommand:nexcode.reviewCode"
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "nexcode-sidebar-container",
+          "title": "NexCode",
+          "icon": "$(hubot)"
+        }
+      ]
+    },
+    "views": {
+      "nexcode-sidebar-container": [
+        {
+          "type": "webview",
+          "id": "nexcode-sidebar-view",
+          "name": "NexCode"
+        }
+      ]
+    },
     "configuration": {
       "title": "NexCode",
       "properties": {
@@ -40,6 +59,10 @@
       {
         "command": "nexcode.generateCode",
         "title": "NexCode: Generate Code"
+      },
+      {
+        "command": "nexcode.generateProject",
+        "title": "NexCode: Generate Project"
       },
       {
         "command": "nexcode.reviewCode",
@@ -70,6 +93,9 @@
         },
         {
           "command": "nexcode.generateCode"
+        },
+        {
+          "command": "nexcode.generateProject"
         },
         {
           "command": "nexcode.reviewCode"

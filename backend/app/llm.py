@@ -29,3 +29,19 @@ def get_cohere_response(prompt: str, feature_type: str):
         ]
     )
     return res.message.content[0].text
+
+def get_cohere_stream_response(prompt: str, feature_type: str):
+    """
+    Unified function for streaming responses from Cohere.
+    """
+    co = get_cohere_client()
+    res = co.chat_stream(
+        model=MODEL_NAME,
+        messages=[
+            {"role": "system", "content": get_system_prompt(feature_type)},
+            {"role": "user", "content": prompt}
+        ]
+    )
+    for event in res:
+        if event and event.type == "content-delta":
+            yield event.delta.message.content.text
