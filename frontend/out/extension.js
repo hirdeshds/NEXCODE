@@ -41,6 +41,8 @@ const codeActions_1 = require("./codeActions");
 const completionProvider_1 = require("./completionProvider");
 const diffView_1 = require("./diffView");
 const statusBar_1 = require("./statusBar");
+const SidebarProvider_1 = require("./SidebarProvider");
+const projectParser_1 = require("./projectParser");
 function getSelectedOrFullText() {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
@@ -73,6 +75,8 @@ function activate(context) {
     const statusBar = new statusBar_1.NexCodeStatusBar();
     statusBar.show();
     context.subscriptions.push(statusBar);
+    const sidebarProvider = new SidebarProvider_1.SidebarProvider(context.extensionUri);
+    context.subscriptions.push(vscode.window.registerWebviewViewProvider("nexcode-sidebar-view", sidebarProvider));
     context.subscriptions.push(vscode.commands.registerCommand("nexcode.explainCode", async () => {
         const code = getSelectedOrFullText();
         if (!code) {
@@ -108,6 +112,25 @@ function activate(context) {
                 language: "plaintext",
             });
             await vscode.window.showTextDocument(document, { preview: false });
+        }
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("nexcode.generateProject", async () => {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders || workspaceFolders.length === 0) {
+            vscode.window.showWarningMessage("Please open a workspace folder first to generate a project.");
+            return;
+        }
+        const prompt = await vscode.window.showInputBox({
+            title: "NexCode Generate Project",
+            prompt: "Describe the complete project you want to build.",
+        });
+        if (!prompt) {
+            return;
+        }
+        const response = await runWithProgress("NexCode is building your project structure...", () => (0, apiClient_1.completeCode)(prompt));
+        if (response) {
+            const workspaceRoot = workspaceFolders[0].uri;
+            await (0, projectParser_1.applyProjectStructure)(response, workspaceRoot);
         }
     }));
     context.subscriptions.push(vscode.languages.registerCodeActionsProvider({ scheme: "file" }, new codeActions_1.NexCodeActionProvider(), {

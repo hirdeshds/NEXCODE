@@ -83,3 +83,48 @@ export async function completeCode(code: string): Promise<string> {
   const response = await requestJson<{ code: string }>("POST", "/complete", { code });
   return response.code;
 }
+
+export async function testCompleteCode(code: string): Promise<string> {
+  const response = await requestJson<{ code: string }>("POST", "/test-complete", { code });
+  return response.code;
+}
+
+export async function streamCompleteCode(code: string, onChunk: (chunk: string) => void): Promise<void> {
+  const url = new URL(`${getBackendUrl()}/stream/complete`);
+  const payload = JSON.stringify({ code });
+  const client = url.protocol === "https:" ? https : http;
+
+  return new Promise((resolve, reject) => {
+    const request = client.request(
+      url,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(payload).toString(),
+        },
+      },
+      (response) => {
+        response.setEncoding("utf8");
+        response.on("data", (chunk) => {
+          onChunk(chunk);
+        });
+
+        response.on("end", () => {
+          if (!response.statusCode || response.statusCode >= 400) {
+            reject(new Error(`Backend error ${response.statusCode}`));
+            return;
+          }
+          resolve();
+        });
+      },
+    );
+
+    request.on("error", (error) => {
+      reject(error);
+    });
+
+    request.write(payload);
+    request.end();
+  });
+}

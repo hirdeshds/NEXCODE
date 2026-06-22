@@ -1,9 +1,11 @@
 import * as vscode from "vscode";
-import { explainCode, fixCode, generateCode } from "./apiClient";
+import { explainCode, fixCode, generateCode, completeCode } from "./apiClient";
 import { NexCodeActionProvider } from "./codeActions";
 import { NexCodeCompletionProvider } from "./completionProvider";
 import { showFixedCode, showMarkdownResult } from "./diffView";
 import { NexCodeStatusBar } from "./statusBar";
+import { SidebarProvider } from "./SidebarProvider";
+import { applyProjectStructure } from "./projectParser";
 
 function getSelectedOrFullText(): string | undefined {
   const editor = vscode.window.activeTextEditor;
@@ -45,6 +47,14 @@ export function activate(context: vscode.ExtensionContext): void {
   const statusBar = new NexCodeStatusBar();
   statusBar.show();
   context.subscriptions.push(statusBar);
+
+  const sidebarProvider = new SidebarProvider(context.extensionUri);
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(
+      "nexcode-sidebar-view",
+      sidebarProvider
+    )
+  );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("nexcode.explainCode", async () => {
@@ -105,6 +115,33 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
+  context.subscriptions.push(
+    vscode.commands.registerCommand("nexcode.generateProject", async () => {
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (!workspaceFolders || workspaceFolders.length === 0) {
+        vscode.window.showWarningMessage("Please open a workspace folder first to generate a project.");
+        return;
+      }
+
+      const prompt = await vscode.window.showInputBox({
+        title: "NexCode Generate Project",
+        prompt: "Describe the complete project you want to build.",
+      });
+
+      if (!prompt) {
+        return;
+      }
+
+      const response = await runWithProgress("NexCode is building your project structure...", () =>
+        completeCode(prompt),
+      );
+
+      if (response) {
+        const workspaceRoot = workspaceFolders[0].uri;
+        await applyProjectStructure(response, workspaceRoot);
+      }
+    }),
+  );
 
 
   context.subscriptions.push(

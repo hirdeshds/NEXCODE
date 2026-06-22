@@ -38,6 +38,8 @@ exports.explainCode = explainCode;
 exports.fixCode = fixCode;
 exports.generateCode = generateCode;
 exports.completeCode = completeCode;
+exports.testCompleteCode = testCompleteCode;
+exports.streamCompleteCode = streamCompleteCode;
 const http = __importStar(require("http"));
 const https = __importStar(require("https"));
 const url_1 = require("url");
@@ -105,5 +107,40 @@ async function generateCode(prompt) {
 async function completeCode(code) {
     const response = await requestJson("POST", "/complete", { code });
     return response.code;
+}
+async function testCompleteCode(code) {
+    const response = await requestJson("POST", "/test-complete", { code });
+    return response.code;
+}
+async function streamCompleteCode(code, onChunk) {
+    const url = new url_1.URL(`${(0, config_1.getBackendUrl)()}/stream/complete`);
+    const payload = JSON.stringify({ code });
+    const client = url.protocol === "https:" ? https : http;
+    return new Promise((resolve, reject) => {
+        const request = client.request(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Content-Length": Buffer.byteLength(payload).toString(),
+            },
+        }, (response) => {
+            response.setEncoding("utf8");
+            response.on("data", (chunk) => {
+                onChunk(chunk);
+            });
+            response.on("end", () => {
+                if (!response.statusCode || response.statusCode >= 400) {
+                    reject(new Error(`Backend error ${response.statusCode}`));
+                    return;
+                }
+                resolve();
+            });
+        });
+        request.on("error", (error) => {
+            reject(error);
+        });
+        request.write(payload);
+        request.end();
+    });
 }
 //# sourceMappingURL=apiClient.js.map
