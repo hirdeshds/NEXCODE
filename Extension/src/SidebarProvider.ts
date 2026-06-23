@@ -30,11 +30,32 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         case "generate": {
           const prompt = data.value;
           if (!prompt) return;
+          const feature = data.feature || "chat";
           try {
-            // Import generateCode dynamically or ensure it's imported at the top of the file
-            const { generateCode } = require("./apiClient");
-            const code = await generateCode(prompt);
-            webviewView.webview.postMessage({ type: "response", value: code });
+            if (feature === "generate-project") {
+              const { completeCode } = require("./apiClient");
+              const { applyProjectStructure } = require("./projectParser");
+              const workspaceFolders = require("vscode").workspace.workspaceFolders;
+              if (!workspaceFolders || workspaceFolders.length === 0) {
+                webviewView.webview.postMessage({ type: "error", value: "Please open a workspace folder first to generate a project." });
+                break;
+              }
+              const response = await completeCode(prompt);
+              await applyProjectStructure(response, workspaceFolders[0].uri);
+              webviewView.webview.postMessage({ type: "response", value: "Project structure generated successfully!" });
+            } else if (feature === "explain") {
+              const { explainCode } = require("./apiClient");
+              const result = await explainCode(prompt);
+              webviewView.webview.postMessage({ type: "response", value: result });
+            } else if (feature === "fix") {
+              const { fixCode } = require("./apiClient");
+              const result = await fixCode(prompt);
+              webviewView.webview.postMessage({ type: "response", value: result });
+            } else {
+              const { generateCode } = require("./apiClient");
+              const code = await generateCode(prompt);
+              webviewView.webview.postMessage({ type: "response", value: code });
+            }
           } catch (err: any) {
             webviewView.webview.postMessage({ type: "error", value: err.message });
           }
@@ -234,6 +255,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
           <select class="feature-selector" id="feature-selector" title="Select Feature">
             <option value="chat">Chat</option>
             <option value="generate">Generate Code</option>
+            <option value="generate-project">Generate Project</option>
             <option value="explain">Explain Code</option>
             <option value="fix">Fix Code</option>
           </select>
