@@ -86,7 +86,7 @@ class SidebarProvider {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NexCode Chat</title>
+  <title>NexCode</title>
   <link href="https://microsoft.github.io/vscode-codicons/dist/codicon.css" rel="stylesheet" />
   <style>
     body {
@@ -111,18 +111,11 @@ class SidebarProvider {
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
-    .tabs {
-      display: flex;
-      gap: 16px;
-    }
-    .tab {
-      cursor: pointer;
-      color: var(--vscode-descriptionForeground);
-      padding-bottom: 4px;
-    }
-    .tab.active {
+    .header-title {
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 1px;
       color: var(--vscode-foreground);
-      border-bottom: 1px solid var(--vscode-foreground);
     }
     .actions {
       display: flex;
@@ -131,6 +124,9 @@ class SidebarProvider {
     .actions span {
       cursor: pointer;
       font-size: 14px;
+    }
+    .actions span:hover {
+      color: var(--vscode-foreground);
     }
     .chat-container {
       flex: 1;
@@ -187,6 +183,7 @@ class SidebarProvider {
       resize: none;
       outline: none;
       height: 40px;
+      box-sizing: border-box;
     }
     .input-actions {
       display: flex;
@@ -206,11 +203,22 @@ class SidebarProvider {
     .right-actions span:hover {
       color: var(--vscode-foreground);
     }
-    .model-selector {
+    .feature-selector {
       display: flex;
       align-items: center;
       gap: 4px;
       cursor: pointer;
+      background: var(--vscode-dropdown-background, var(--vscode-input-background));
+      border: 1px solid var(--vscode-dropdown-border, var(--vscode-input-border));
+      border-radius: 4px;
+      padding: 2px 6px;
+      color: var(--vscode-dropdown-foreground, var(--vscode-foreground));
+      font-size: 12px;
+      font-family: var(--vscode-font-family);
+      outline: none;
+    }
+    .feature-selector:focus {
+      border-color: var(--vscode-focusBorder);
     }
     .status-bar {
       display: flex;
@@ -231,22 +239,17 @@ class SidebarProvider {
 </head>
 <body>
   <div class="header">
-    <div class="tabs">
-      <div class="tab active">CHAT</div>
-      <div class="tab">CODEX</div>
-      <div class="tab"><span class="codicon codicon-add"></span></div>
-    </div>
+    <div class="header-title">NEXCODE</div>
     <div class="actions">
-      <span class="codicon codicon-check-all"></span>
-      <span class="codicon codicon-settings-gear"></span>
-      <span class="codicon codicon-ellipsis"></span>
-      <span class="codicon codicon-screen-full"></span>
-      <span class="codicon codicon-layout-sidebar-right"></span>
+      <span class="codicon codicon-check-all" title="Approve All"></span>
+      <span class="codicon codicon-settings-gear" title="Settings"></span>
+      <span class="codicon codicon-ellipsis" title="More"></span>
+      <span class="codicon codicon-screen-full" title="Expand"></span>
+      <span class="codicon codicon-layout-sidebar-right" title="Move to Panel"></span>
     </div>
   </div>
   
   <div class="chat-container" id="chat-container">
-    <!-- Chat messages will appear here -->
     <div class="message assistant" id="welcome-message">
       <div class="bubble">Hello! Describe what you'd like to build.</div>
     </div>
@@ -255,17 +258,21 @@ class SidebarProvider {
 
   <div class="input-area">
     <div style="font-size: 11px; margin-bottom: 4px; display: flex; gap: 4px; align-items: center; color: var(--vscode-descriptionForeground);">
-      <span class="codicon codicon-add"></span> <span style="background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); padding: 2px 4px; border-radius: 4px;">Context</span>
+      <span class="codicon codicon-add"></span>
+      <span style="background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); padding: 2px 4px; border-radius: 4px;">Context</span>
     </div>
     <div class="input-box">
       <textarea id="prompt-input" placeholder="Describe what to build... (Press Enter to send)"></textarea>
       <div class="input-actions">
         <div class="left-actions">
-          <span class="codicon codicon-add"></span>
-          <span class="codicon codicon-code"></span>
-          <div class="model-selector">
-            Claude Haiku 4.5 <span class="codicon codicon-settings"></span>
-          </div>
+          <span class="codicon codicon-add" title="Attach"></span>
+          <span class="codicon codicon-code" title="Insert Code"></span>
+          <select class="feature-selector" id="feature-selector" title="Select Feature">
+            <option value="chat">Chat</option>
+            <option value="generate">Generate Code</option>
+            <option value="explain">Explain Code</option>
+            <option value="fix">Fix Code</option>
+          </select>
         </div>
         <div class="right-actions">
           <span class="codicon codicon-send" id="send-btn" title="Send (Enter)"></span>
@@ -277,12 +284,14 @@ class SidebarProvider {
       <span><span class="codicon codicon-shield"></span> Default Approvals</span>
     </div>
   </div>
+
   <script>
     const vscode = acquireVsCodeApi();
     const input = document.getElementById('prompt-input');
     const sendBtn = document.getElementById('send-btn');
     const chatContainer = document.getElementById('chat-container');
     const loader = document.getElementById('loader');
+    const featureSelector = document.getElementById('feature-selector');
 
     function appendMessage(role, text) {
       const msgDiv = document.createElement('div');
@@ -298,13 +307,14 @@ class SidebarProvider {
     function sendMessage() {
       const text = input.value.trim();
       if (!text) return;
-      
+
+      const feature = featureSelector.value;
       appendMessage('user', text);
       input.value = '';
       loader.style.display = 'block';
       chatContainer.scrollTop = chatContainer.scrollHeight;
 
-      vscode.postMessage({ type: 'generate', value: text });
+      vscode.postMessage({ type: 'generate', value: text, feature: feature });
     }
 
     input.addEventListener('keydown', (e) => {
