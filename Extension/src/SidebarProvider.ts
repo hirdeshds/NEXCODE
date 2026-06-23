@@ -61,6 +61,73 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
           }
           break;
         }
+        case "openSettings": {
+          vscode.commands.executeCommand("workbench.action.openSettings", "nexcode");
+          break;
+        }
+        case "newChat": {
+          webviewView.webview.postMessage({ type: "clearChat" });
+          break;
+        }
+        case "moreOptions": {
+          const items = ["Clear Chat", "Export Chat History", "Restart Backend Connection"];
+          const choice = await vscode.window.showQuickPick(items, {
+            placeHolder: "Select an action"
+          });
+          if (choice === "Clear Chat") {
+            webviewView.webview.postMessage({ type: "clearChat" });
+          } else if (choice === "Export Chat History") {
+            webviewView.webview.postMessage({ type: "exportChat" });
+          } else if (choice === "Restart Backend Connection") {
+            vscode.window.showInformationMessage("Reconnecting to NexCode backend...");
+          }
+          break;
+        }
+        case "moveToPanel": {
+          vscode.commands.executeCommand("workbench.action.moveFocusedView");
+          break;
+        }
+        case "expandView": {
+          vscode.window.showInformationMessage("Drag the sidebar edge to resize the NexCode panel.");
+          break;
+        }
+        case "insertCode": {
+          const editor = vscode.window.activeTextEditor;
+          if (editor) {
+            const selection = editor.document.getText(editor.selection);
+            if (selection.trim()) {
+              webviewView.webview.postMessage({ type: "insertCode", value: selection });
+            } else {
+              vscode.window.showWarningMessage("No code selected in the editor. Select some code first.");
+            }
+          } else {
+            vscode.window.showWarningMessage("No active editor found.");
+          }
+          break;
+        }
+        case "attachFile": {
+          const fileUri = await vscode.window.showOpenDialog({
+            canSelectMany: false,
+            openLabel: "Attach File",
+            filters: { "All Files": ["*"] }
+          });
+          if (fileUri && fileUri[0]) {
+            const content = await vscode.workspace.fs.readFile(fileUri[0]);
+            const text = Buffer.from(content).toString("utf8");
+            const parts = fileUri[0].path.split("/");
+            const fileName = parts[parts.length - 1] || "file";
+            webviewView.webview.postMessage({ type: "attachedFile", value: text, fileName: fileName });
+          }
+          break;
+        }
+        case "exportChatData": {
+          const doc = await vscode.workspace.openTextDocument({
+            content: data.value,
+            language: "markdown"
+          });
+          await vscode.window.showTextDocument(doc, { preview: false });
+          break;
+        }
       }
     });
   }
@@ -226,11 +293,11 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
   <div class="header">
     <div class="header-title">NEXCODE</div>
     <div class="actions">
-      <span class="codicon codicon-check-all" title="Approve All"></span>
-      <span class="codicon codicon-settings-gear" title="Settings"></span>
-      <span class="codicon codicon-ellipsis" title="More"></span>
-      <span class="codicon codicon-screen-full" title="Expand"></span>
-      <span class="codicon codicon-layout-sidebar-right" title="Move to Panel"></span>
+      <span class="codicon codicon-check-all" id="btn-new-chat" title="New Chat"></span>
+      <span class="codicon codicon-settings-gear" id="btn-settings" title="Settings"></span>
+      <span class="codicon codicon-ellipsis" id="btn-more" title="More"></span>
+      <span class="codicon codicon-screen-full" id="btn-expand" title="Expand"></span>
+      <span class="codicon codicon-layout-sidebar-right" id="btn-move-panel" title="Move to Panel"></span>
     </div>
   </div>
   
@@ -242,7 +309,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
   </div>
 
   <div class="input-area">
-    <div style="font-size: 11px; margin-bottom: 4px; display: flex; gap: 4px; align-items: center; color: var(--vscode-descriptionForeground);">
+    <div id="add-context-btn" style="font-size: 11px; margin-bottom: 4px; display: flex; gap: 4px; align-items: center; color: var(--vscode-descriptionForeground); cursor: pointer;" title="Attach file as context">
       <span class="codicon codicon-add"></span>
       <span style="background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); padding: 2px 4px; border-radius: 4px;">Context</span>
     </div>
@@ -250,8 +317,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       <textarea id="prompt-input" placeholder="Describe what to build... (Press Enter to send)"></textarea>
       <div class="input-actions">
         <div class="left-actions">
-          <span class="codicon codicon-add" title="Attach"></span>
-          <span class="codicon codicon-code" title="Insert Code"></span>
+          <span class="codicon codicon-add" id="attach-btn" title="Attach File"></span>
+          <span class="codicon codicon-code" id="insert-code-btn" title="Insert Selected Code"></span>
           <select class="feature-selector" id="feature-selector" title="Select Feature">
             <option value="chat">Chat</option>
             <option value="generate">Generate Code</option>
@@ -314,7 +381,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
     window.addEventListener('message', event => {
       const message = event.data;
-      loader.style.display = 'none';
+      if (message.type !== 'insertCode' && message.type !== 'attachedFile') {
+        loader.style.display = 'none';
+      }
       switch (message.type) {
         case 'response':
           appendMessage('assistant', message.value);
@@ -322,7 +391,76 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         case 'error':
           appendMessage('assistant', 'Error: ' + message.value);
           break;
+        case 'insertCode':
+          input.value += message.value;
+          input.style.height = 'auto';
+          input.style.height = Math.min(input.scrollHeight, 200) + 'px';
+          input.focus();
+          break;
+        case 'attachedFile':
+          var prefix = input.value.trim() ? '\n' : '';
+          input.value += prefix + '--- ' + message.fileName + ' ---\n' + message.value;
+          input.style.height = 'auto';
+          input.style.height = Math.min(input.scrollHeight, 200) + 'px';
+          input.focus();
+          appendMessage('assistant', '📎 Attached: ' + message.fileName);
+          break;
+        case 'clearChat':
+          var messages = chatContainer.querySelectorAll('.message');
+          messages.forEach(function(m) { m.remove(); });
+          var welcome = document.createElement('div');
+          welcome.className = 'message assistant';
+          var wb = document.createElement('div');
+          wb.className = 'bubble';
+          wb.textContent = "Hello! Describe what you'd like to build.";
+          welcome.appendChild(wb);
+          chatContainer.insertBefore(welcome, loader);
+          break;
+        case 'exportChat':
+          var chatText = '';
+          chatContainer.querySelectorAll('.message').forEach(function(m) {
+            var role = m.classList.contains('user') ? 'You' : 'NexCode';
+            var bubble = m.querySelector('.bubble');
+            var text = bubble ? bubble.textContent : '';
+            chatText += role + ': ' + text + '\n\n';
+          });
+          vscode.postMessage({ type: 'exportChatData', value: chatText });
+          break;
       }
+    });
+
+    // Header action buttons
+    document.getElementById('btn-new-chat').addEventListener('click', function() {
+      vscode.postMessage({ type: 'newChat' });
+    });
+
+    document.getElementById('btn-settings').addEventListener('click', function() {
+      vscode.postMessage({ type: 'openSettings' });
+    });
+
+    document.getElementById('btn-more').addEventListener('click', function() {
+      vscode.postMessage({ type: 'moreOptions' });
+    });
+
+    document.getElementById('btn-expand').addEventListener('click', function() {
+      vscode.postMessage({ type: 'expandView' });
+    });
+
+    document.getElementById('btn-move-panel').addEventListener('click', function() {
+      vscode.postMessage({ type: 'moveToPanel' });
+    });
+
+    // Input area action buttons
+    document.getElementById('add-context-btn').addEventListener('click', function() {
+      vscode.postMessage({ type: 'attachFile' });
+    });
+
+    document.getElementById('attach-btn').addEventListener('click', function() {
+      vscode.postMessage({ type: 'attachFile' });
+    });
+
+    document.getElementById('insert-code-btn').addEventListener('click', function() {
+      vscode.postMessage({ type: 'insertCode' });
     });
   </script>
 </body>
