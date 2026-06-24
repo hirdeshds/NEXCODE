@@ -2,3 +2,7 @@ cohere
 fastapi
 python-dotenv
 uvicorn
+PyGithub
+docker
+httpx
+pydantic
