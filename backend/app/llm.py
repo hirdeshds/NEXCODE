@@ -1,28 +1,24 @@
 import cohere
-import os
-from dotenv import load_dotenv
 from app.prompts import get_system_prompt
-
-load_dotenv()
-
-MODEL_NAME = os.getenv("COHERE_MODEL", "command-r-08-2024")
+from app.config import get_settings
 
 
-def get_cohere_client():
-    """Create the Cohere client only when an API call is needed."""
-    api_key = os.getenv("COHERE_API_KEY")
-    if not api_key:
+def get_cohere_client() -> cohere.AsyncClientV2:
+    """Create the Cohere Async client."""
+    settings = get_settings()
+    if not settings.cohere_api_key:
         raise RuntimeError("COHERE_API_KEY is missing. Add it to backend/.env")
-    return cohere.ClientV2(api_key=api_key)
+    return cohere.AsyncClientV2(api_key=settings.cohere_api_key)
 
 
-def get_cohere_response(prompt: str, feature_type: str):
+async def get_cohere_response(prompt: str, feature_type: str) -> str:
     """
     Unified function for all NexCode features using Cohere.
     """
+    settings = get_settings()
     co = get_cohere_client()
-    res = co.chat(
-        model=MODEL_NAME,
+    res = await co.chat(
+        model=settings.cohere_model,
         messages=[
             {"role": "system", "content": get_system_prompt(feature_type)},
             {"role": "user", "content": prompt}
@@ -30,18 +26,20 @@ def get_cohere_response(prompt: str, feature_type: str):
     )
     return res.message.content[0].text
 
-def get_cohere_stream_response(prompt: str, feature_type: str):
+async def get_cohere_stream_response(prompt: str, feature_type: str):
     """
     Unified function for streaming responses from Cohere.
     """
+    settings = get_settings()
     co = get_cohere_client()
     res = co.chat_stream(
-        model=MODEL_NAME,
+        model=settings.cohere_model,
         messages=[
             {"role": "system", "content": get_system_prompt(feature_type)},
             {"role": "user", "content": prompt}
         ]
     )
-    for event in res:
+    async for event in res:
         if event and event.type == "content-delta":
             yield event.delta.message.content.text
+
