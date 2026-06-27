@@ -6,3 +6,4 @@ PyGithub
 docker
 httpx
 pydantic
+pydantic-settings
