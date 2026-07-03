@@ -1,13 +1,47 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, root_validator
 from typing import Optional, List
 
 
-class CodeRequest(BaseModel):
-    code: str = Field(..., max_length=50000, description="The source code to process")
+class BaseInput(BaseModel):
+    code: Optional[str] = Field(None, max_length=50000, description="The source code or input text")
+    prompt: Optional[str] = Field(None, max_length=50000, description="The prompt or natural language instruction")
+    text: Optional[str] = Field(None, max_length=50000, description="Alternative input field for request bodies")
+
+    @root_validator(pre=True)
+    def validate_input(cls, values):
+        code = values.get("code")
+        prompt = values.get("prompt")
+        text = values.get("text")
+        if not any([code and str(code).strip(), prompt and str(prompt).strip(), text and str(text).strip()]):
+            raise ValueError("One of code, prompt, or text must be provided")
+        return values
+
+    def get_input(self) -> str:
+        return (self.code or self.prompt or self.text or "").strip()
 
 
-class PromptRequest(BaseModel):
-    prompt: str = Field(..., max_length=5000, description="The prompt or natural language instruction")
+class CodeRequest(BaseInput):
+    pass
+
+
+class PromptRequest(BaseInput):
+    pass
+
+
+class AIRequest(BaseInput):
+    feature: str = Field(..., description="Feature to invoke: explain, generate, fix, complete, or test-complete")
+
+
+class CompleteRequest(BaseModel):
+    code: Optional[str] = Field(None, max_length=50000, description="Code context or prompt text")
+    prompt: Optional[str] = Field(None, max_length=50000, description="Natural language prompt or request")
+    text: Optional[str] = Field(None, max_length=50000, description="Alternative input field for completion requests")
+
+    def get_input(self) -> str:
+        value = self.prompt or self.code or self.text or ""
+        if not value.strip():
+            raise ValueError("One of code, prompt, or text must be provided")
+        return value.strip()
 
 
 class PipelineRequest(BaseModel):
