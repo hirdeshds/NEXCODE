@@ -7,6 +7,7 @@ from app.llm import get_cohere_response, get_cohere_stream_response
 from app.schemas import CodeRequest, PromptRequest, PipelineRequest
 from app.pipeline.agent import run_pipeline
 from app.config import get_settings
+from app.independent_api import independent_api
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -128,6 +129,62 @@ async def stream_complete_code(request: CodeRequest):
     logger.info("Streaming complete code")
     return StreamingResponse(
         get_cohere_stream_response(request.code, feature_type="complete"),
+        media_type="text/event-stream"
+    )
+
+
+# ── Independent API (pluggable providers, local fallback) ───────────────────
+
+
+@app.post("/independent/explain", tags=["Independent API"])
+async def independent_explain(request: CodeRequest):
+    logger.info("Independent explain")
+    try:
+        explanation = await independent_api.respond(request.code, feature_type="explain")
+        return {"explanation": explanation}
+    except Exception as e:
+        logger.error(f"Independent explain error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/independent/generate", tags=["Independent API"])
+async def independent_generate(request: PromptRequest):
+    logger.info("Independent generate")
+    try:
+        code = await independent_api.respond(request.prompt, feature_type="generate")
+        return {"code": code}
+    except Exception as e:
+        logger.error(f"Independent generate error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/independent/fix", tags=["Independent API"])
+async def independent_fix(request: CodeRequest):
+    logger.info("Independent fix")
+    try:
+        fixed = await independent_api.respond(request.code, feature_type="fix")
+        return {"fixed_code": fixed}
+    except Exception as e:
+        logger.error(f"Independent fix error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/independent/complete", tags=["Independent API"])
+async def independent_complete(request: CodeRequest):
+    logger.info("Independent complete")
+    try:
+        code = await independent_api.respond(request.code, feature_type="complete")
+        return {"code": code}
+    except Exception as e:
+        logger.error(f"Independent complete error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/independent/stream/complete", tags=["Independent API"])
+async def independent_stream_complete(request: CodeRequest):
+    logger.info("Independent stream complete")
+    return StreamingResponse(
+        independent_api.stream_response(request.code, feature_type="complete"),
         media_type="text/event-stream"
     )
 
