@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, root_validator
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 from typing import Optional, List
 
 
@@ -7,7 +7,9 @@ class BaseInput(BaseModel):
     prompt: Optional[str] = Field(None, max_length=50000, description="The prompt or natural language instruction")
     text: Optional[str] = Field(None, max_length=50000, description="Alternative input field for request bodies")
 
-    @root_validator(pre=True)
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="before")
     def validate_input(cls, values):
         code = values.get("code")
         prompt = values.get("prompt")
