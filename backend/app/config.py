@@ -4,6 +4,7 @@ from functools import lru_cache
 class Settings(BaseSettings):
     cohere_api_key: str = ""
     cohere_model: str = "command-r-08-2024"
+    independent_api_provider: str = "local"
     cors_origins: str = "*"
 
     model_config = SettingsConfigDict(
