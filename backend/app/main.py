@@ -4,7 +4,7 @@ from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
 from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.llm import get_cohere_response, get_cohere_stream_response
-from app.schemas import CodeRequest, PromptRequest, PipelineRequest
+from app.schemas import AIRequest, BaseInput, CodeRequest, PromptRequest, PipelineRequest
 from app.pipeline.agent import run_pipeline
 from app.config import get_settings
 from app.independent_api import independent_api
@@ -53,11 +53,11 @@ async def health_check():
 
 
 @app.post("/explain", tags=["AI Features"])
-async def explain_code(request: CodeRequest):
+async def explain_code(request: BaseInput):
     logger.info("Explaining code")
     try:
         explanation = await get_cohere_response(
-            request.code,
+            request.get_input(),
             feature_type="explain"
         )
         return {"explanation": explanation}
@@ -67,11 +67,11 @@ async def explain_code(request: CodeRequest):
 
 
 @app.post("/generate", tags=["AI Features"])
-async def generate_code(request: PromptRequest):
+async def generate_code(request: BaseInput):
     logger.info("Generating code")
     try:
         code = await get_cohere_response(
-            request.prompt,
+            request.get_input(),
             feature_type="generate"
         )
         return {"code": code}
@@ -81,11 +81,11 @@ async def generate_code(request: PromptRequest):
 
 
 @app.post("/fix", tags=["AI Features"])
-async def fix_code(request: CodeRequest):
+async def fix_code(request: BaseInput):
     logger.info("Fixing code")
     try:
         fixed_code = await get_cohere_response(
-            request.code,
+            request.get_input(),
             feature_type="fix"
         )
         return {"fixed_code": fixed_code}
@@ -95,11 +95,11 @@ async def fix_code(request: CodeRequest):
 
 
 @app.post("/complete", tags=["AI Features"])
-async def complete_code(request: CodeRequest):
+async def complete_code(request: BaseInput):
     logger.info("Completing code")
     try:
         code = await get_cohere_response(
-            request.code,
+            request.get_input(),
             feature_type="complete"
         )
         return {"code": code}
@@ -109,12 +109,12 @@ async def complete_code(request: CodeRequest):
 
 
 @app.post("/test-complete", tags=["AI Features"])
-async def test_complete_code(request: CodeRequest):
+async def test_complete_code(request: BaseInput):
     """Faster endpoint that generates stubs instead of full files."""
     logger.info("Test-completing code")
     try:
         code = await get_cohere_response(
-            request.code,
+            request.get_input(),
             feature_type="test-complete"
         )
         return {"code": code}
@@ -124,23 +124,44 @@ async def test_complete_code(request: CodeRequest):
 
 
 @app.post("/stream/complete", tags=["AI Features"])
-async def stream_complete_code(request: CodeRequest):
+async def stream_complete_code(request: BaseInput):
     """Streaming version of /complete that returns code chunk by chunk."""
     logger.info("Streaming complete code")
     return StreamingResponse(
-        get_cohere_stream_response(request.code, feature_type="complete"),
+        get_cohere_stream_response(request.get_input(), feature_type="complete"),
         media_type="text/event-stream"
     )
+
+
+@app.post("/ai", tags=["AI Features"])
+async def ai_router(request: AIRequest):
+    logger.info(f"AI router feature={request.feature}")
+    try:
+        feature = request.feature.lower()
+        if feature not in {"explain", "generate", "fix", "complete", "test-complete"}:
+            raise HTTPException(status_code=400, detail="Invalid feature")
+
+        response_text = await get_cohere_response(request.get_input(), feature_type=feature)
+
+        if feature == "explain":
+            return {"explanation": response_text}
+        return {"code": response_text}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in ai router: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ── Independent API (pluggable providers, local fallback) ───────────────────
 
 
 @app.post("/independent/explain", tags=["Independent API"])
-async def independent_explain(request: CodeRequest):
+async def independent_explain(request: BaseInput):
     logger.info("Independent explain")
     try:
-        explanation = await independent_api.respond(request.code, feature_type="explain")
+        explanation = await independent_api.respond(request.get_input(), feature_type="explain")
         return {"explanation": explanation}
     except Exception as e:
         logger.error(f"Independent explain error: {e}")
@@ -148,10 +169,10 @@ async def independent_explain(request: CodeRequest):
 
 
 @app.post("/independent/generate", tags=["Independent API"])
-async def independent_generate(request: PromptRequest):
+async def independent_generate(request: BaseInput):
     logger.info("Independent generate")
     try:
-        code = await independent_api.respond(request.prompt, feature_type="generate")
+        code = await independent_api.respond(request.get_input(), feature_type="generate")
         return {"code": code}
     except Exception as e:
         logger.error(f"Independent generate error: {e}")
@@ -159,10 +180,10 @@ async def independent_generate(request: PromptRequest):
 
 
 @app.post("/independent/fix", tags=["Independent API"])
-async def independent_fix(request: CodeRequest):
+async def independent_fix(request: BaseInput):
     logger.info("Independent fix")
     try:
-        fixed = await independent_api.respond(request.code, feature_type="fix")
+        fixed = await independent_api.respond(request.get_input(), feature_type="fix")
         return {"fixed_code": fixed}
     except Exception as e:
         logger.error(f"Independent fix error: {e}")
@@ -170,10 +191,10 @@ async def independent_fix(request: CodeRequest):
 
 
 @app.post("/independent/complete", tags=["Independent API"])
-async def independent_complete(request: CodeRequest):
+async def independent_complete(request: BaseInput):
     logger.info("Independent complete")
     try:
-        code = await independent_api.respond(request.code, feature_type="complete")
+        code = await independent_api.respond(request.get_input(), feature_type="complete")
         return {"code": code}
     except Exception as e:
         logger.error(f"Independent complete error: {e}")
@@ -181,10 +202,10 @@ async def independent_complete(request: CodeRequest):
 
 
 @app.post("/independent/stream/complete", tags=["Independent API"])
-async def independent_stream_complete(request: CodeRequest):
+async def independent_stream_complete(request: BaseInput):
     logger.info("Independent stream complete")
     return StreamingResponse(
-        independent_api.stream_response(request.code, feature_type="complete"),
+        independent_api.stream_response(request.get_input(), feature_type="complete"),
         media_type="text/event-stream"
     )
 
