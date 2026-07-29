@@ -25,11 +25,11 @@ Code:
 ```"""
 
 
-def run_stage1(code: str, language: str) -> dict:
+async def run_stage1(code: str, language: str) -> dict:
     """Run basic bug check. Returns dict with status, analysis, bugs_found."""
 
     prompt = STAGE1_PROMPT.format(language=language, code=code)
-    analysis = get_cohere_response(prompt, feature_type="explain")
+    analysis = await get_cohere_response(prompt, feature_type="explain")
 
     # Check if LLM said FAIL
     status = "pass"
