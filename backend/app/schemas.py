@@ -31,7 +31,7 @@ class PromptRequest(BaseInput):
 
 
 class AIRequest(BaseInput):
-    feature: str = Field(..., description="Feature to invoke: explain, generate, fix, complete, or test-complete")
+    feature: str = Field(..., description="Feature to invoke: explain, generate, fix, review, complete, or test-complete")
 
 
 class CompleteRequest(BaseModel):

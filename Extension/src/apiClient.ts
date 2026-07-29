@@ -74,6 +74,11 @@ export async function fixCode(code: string): Promise<string> {
   return response.fixed_code;
 }
 
+export async function reviewCode(code: string): Promise<string> {
+  const response = await requestJson<{ review: string }>("POST", "/review", { code });
+  return response.review;
+}
+
 export async function generateCode(prompt: string): Promise<string> {
   const response = await requestJson<{ code: string }>("POST", "/generate", { prompt });
   return response.code;

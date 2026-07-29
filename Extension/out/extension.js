@@ -97,6 +97,16 @@ function activate(context) {
             await (0, diffView_1.showFixedCode)(code, fixedCode);
         }
     }));
+    context.subscriptions.push(vscode.commands.registerCommand("nexcode.reviewCode", async () => {
+        const code = getSelectedOrFullText();
+        if (!code) {
+            return;
+        }
+        const review = await runWithProgress("NexCode is reviewing your code...", () => (0, apiClient_1.reviewCode)(code));
+        if (review) {
+            await (0, diffView_1.showMarkdownResult)("NexCode Code Review", review);
+        }
+    }));
     context.subscriptions.push(vscode.commands.registerCommand("nexcode.generateCode", async () => {
         const prompt = await vscode.window.showInputBox({
             title: "NexCode Generate Code",

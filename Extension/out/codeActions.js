@@ -47,7 +47,12 @@ class NexCodeActionProvider {
             command: "nexcode.fixCode",
             title: "Fix Code",
         };
-        return [explainAction, fixAction];
+        const reviewAction = new vscode.CodeAction("NexCode: Review Code", vscode.CodeActionKind.RefactorRewrite);
+        reviewAction.command = {
+            command: "nexcode.reviewCode",
+            title: "Review Code",
+        };
+        return [explainAction, fixAction, reviewAction];
     }
 }
 exports.NexCodeActionProvider = NexCodeActionProvider;

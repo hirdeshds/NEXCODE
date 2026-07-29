@@ -11,6 +11,11 @@ SYSTEM_PROMPTS = {
         "You are a debugging expert. Find the problem in the given code and return a corrected version. "
         "Briefly explain what was fixed."
     ),
+    "review": (
+        "You are a senior code reviewer. Review the given code for correctness, security, "
+        "maintainability, performance, and missing edge cases. Return concise findings with "
+        "severity labels and specific suggestions. If the code looks clean, say that clearly."
+    ),
     "complete": """You are an expert full-stack software architect and developer. Your task is to generate a complete, production-ready project from a single user requirement.
 
 ---

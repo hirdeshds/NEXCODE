@@ -40,6 +40,22 @@ def test_generate_route_with_code_field():
     assert response.json() == {"code": "print('generated')"}
 
 
+def test_review_route_with_code_field():
+    with patch("app.main.get_cohere_response", new=AsyncMock(return_value="No issues found.")):
+        response = client.post("/review", json={"code": "print('hello')"})
+
+    assert response.status_code == 200
+    assert response.json() == {"review": "No issues found."}
+
+
+def test_ai_router_review():
+    with patch("app.main.get_cohere_response", new=AsyncMock(return_value="Looks clean.")):
+        response = client.post("/ai", json={"feature": "review", "text": "print('hello')"})
+
+    assert response.status_code == 200
+    assert response.json() == {"review": "Looks clean."}
+
+
 def test_pipeline_stage1_awaits_llm_response():
     llm_response = "STATUS: PASS\nBUGS: 0\nDETAILS: No bugs detected."
 
