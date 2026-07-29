@@ -35,7 +35,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getBackendUrl = getBackendUrl;
 const vscode = __importStar(require("vscode"));
-const DEFAULT_BACKEND_URL = "http://127.0.0.1:8000";
+const DEFAULT_BACKEND_URL = "https://nexcode-3n9e.onrender.com";
 function getBackendUrl() {
     const configuredUrl = vscode.workspace
         .getConfiguration("nexcode")
