@@ -28,7 +28,7 @@ Code:
 ```"""
 
 
-def run_stage2(code: str, language: str, banned_keywords: list = None, max_function_lines: int = 50) -> dict:
+async def run_stage2(code: str, language: str, banned_keywords: list = None, max_function_lines: int = 50) -> dict:
     """Run syntax and keywords check. Returns dict with status, analysis, issues_found."""
 
     keywords_str = ", ".join(banned_keywords) if banned_keywords else "none"
@@ -39,7 +39,7 @@ def run_stage2(code: str, language: str, banned_keywords: list = None, max_funct
         banned_keywords=keywords_str,
         max_lines=max_function_lines,
     )
-    analysis = get_cohere_response(prompt, feature_type="explain")
+    analysis = await get_cohere_response(prompt, feature_type="explain")
 
     # Check if LLM said FAIL
     status = "pass"

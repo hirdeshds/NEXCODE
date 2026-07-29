@@ -213,12 +213,12 @@ async def independent_stream_complete(request: BaseInput):
 # ── Pipeline Routes ──────────────────────────────────────────
 
 
-def run_pipeline_background(job_id: str, request: PipelineRequest):
+async def run_pipeline_background(job_id: str, request: PipelineRequest):
     logger.info(f"Starting pipeline job {job_id}")
     try:
         # Note: run_pipeline is currently synchronous. We could run it in a threadpool
         # if it's heavily blocking, but BackgroundTasks will run it in a separate thread anyway.
-        result = run_pipeline(
+        result = await run_pipeline(
             code=request.code,
             language=request.language,
             repo=request.repo,
@@ -266,7 +266,7 @@ async def pipeline_pr(request: PipelineRequest):
     try:
         # Since this creates a PR synchronously in one go, we can just run it.
         # Alternatively, it could be pushed to BackgroundTasks as well if it takes too long.
-        result = run_pipeline(
+        result = await run_pipeline(
             code=request.code,
             language=request.language,
             repo=request.repo,
@@ -279,4 +279,3 @@ async def pipeline_pr(request: PipelineRequest):
     except Exception as e:
         logger.error(f"Error in pipeline_pr: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-

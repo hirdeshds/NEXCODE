@@ -6,9 +6,9 @@ from app.pipeline.stage3_run import run_stage3
 from app.pipeline.github_pr import create_pull_request
 
 
-def run_pipeline(code: str, language: str, repo: str, base_branch: str,
-                 github_token: str, banned_keywords: list = None,
-                 max_function_lines: int = 50) -> dict:
+async def run_pipeline(code: str, language: str, repo: str, base_branch: str,
+                       github_token: str, banned_keywords: list = None,
+                       max_function_lines: int = 50) -> dict:
     """
     Run the full 3-stage pipeline on code.
 
@@ -27,7 +27,7 @@ def run_pipeline(code: str, language: str, repo: str, base_branch: str,
     }
 
     # Stage 1: Basic Bug Check
-    stage1 = run_stage1(code, language)
+    stage1 = await run_stage1(code, language)
     result["stage1"] = stage1
 
     if stage1["status"] == "fail":
@@ -35,7 +35,7 @@ def run_pipeline(code: str, language: str, repo: str, base_branch: str,
         return result
 
     # Stage 2: Syntax & Keywords
-    stage2 = run_stage2(code, language, banned_keywords, max_function_lines)
+    stage2 = await run_stage2(code, language, banned_keywords, max_function_lines)
     result["stage2"] = stage2
 
     if stage2["status"] == "fail":
@@ -43,7 +43,7 @@ def run_pipeline(code: str, language: str, repo: str, base_branch: str,
         return result
 
     # Stage 3: Full Scan + Docker Run
-    stage3 = run_stage3(code, language)
+    stage3 = await run_stage3(code, language)
     result["stage3"] = stage3
 
     if stage3["status"] == "fail":

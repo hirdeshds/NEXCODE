@@ -64,12 +64,12 @@ def run_code_in_docker(code: str, timeout: int = 10) -> dict:
         }
 
 
-def run_stage3(code: str, language: str) -> dict:
+async def run_stage3(code: str, language: str) -> dict:
     """Run full AI scan + Docker sandbox. Returns dict with status, analysis, sandbox_result."""
 
     # Part 1: AI full scan
     prompt = STAGE3_PROMPT.format(language=language, code=code)
-    analysis = get_cohere_response(prompt, feature_type="explain")
+    analysis = await get_cohere_response(prompt, feature_type="explain")
 
     ai_status = "pass"
     if "STATUS: FAIL" in analysis.upper():
