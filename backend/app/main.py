@@ -94,6 +94,20 @@ async def fix_code(request: BaseInput):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/review", tags=["AI Features"])
+async def review_code(request: BaseInput):
+    logger.info("Reviewing code")
+    try:
+        review = await get_cohere_response(
+            request.get_input(),
+            feature_type="review"
+        )
+        return {"review": review}
+    except Exception as e:
+        logger.error(f"Error in review: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/complete", tags=["AI Features"])
 async def complete_code(request: BaseInput):
     logger.info("Completing code")
@@ -138,13 +152,15 @@ async def ai_router(request: AIRequest):
     logger.info(f"AI router feature={request.feature}")
     try:
         feature = request.feature.lower()
-        if feature not in {"explain", "generate", "fix", "complete", "test-complete"}:
+        if feature not in {"explain", "generate", "fix", "review", "complete", "test-complete"}:
             raise HTTPException(status_code=400, detail="Invalid feature")
 
         response_text = await get_cohere_response(request.get_input(), feature_type=feature)
 
         if feature == "explain":
             return {"explanation": response_text}
+        if feature == "review":
+            return {"review": response_text}
         return {"code": response_text}
 
     except HTTPException:

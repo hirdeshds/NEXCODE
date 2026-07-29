@@ -36,6 +36,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.checkHealth = checkHealth;
 exports.explainCode = explainCode;
 exports.fixCode = fixCode;
+exports.reviewCode = reviewCode;
 exports.generateCode = generateCode;
 exports.completeCode = completeCode;
 exports.testCompleteCode = testCompleteCode;
@@ -99,6 +100,10 @@ async function explainCode(code) {
 async function fixCode(code) {
     const response = await requestJson("POST", "/fix", { code });
     return response.fixed_code;
+}
+async function reviewCode(code) {
+    const response = await requestJson("POST", "/review", { code });
+    return response.review;
 }
 async function generateCode(prompt) {
     const response = await requestJson("POST", "/generate", { prompt });
