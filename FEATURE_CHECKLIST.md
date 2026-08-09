@@ -41,8 +41,8 @@ Last reviewed: 2026-08-09
 - [x] Project parser path traversal protection
 - [x] Strict project response validation
 - [x] Sandbox execution for non-Python languages
-- [ ] Loading pipeline standards from `nexcode.config.json`
-- [ ] Loading GitHub and deployment configuration from `nexcode.config.json`
+- [x] Loading pipeline standards from `nexcode.config.json`
+- [x] Loading GitHub and deployment configuration from `nexcode.config.json`
 - [ ] Extension integration with pipeline routes
 - [ ] Pipeline result notifications in VS Code
 - [ ] Durable pipeline job storage

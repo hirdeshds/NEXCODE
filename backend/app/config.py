@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 
@@ -20,3 +22,24 @@ class Settings(BaseSettings):
 @lru_cache()
 def get_settings() -> Settings:
     return Settings()
+
+
+@lru_cache()
+def get_nexcode_config() -> dict:
+    """Load optional repository configuration from nexcode.config.json."""
+    config_path = Path(__file__).resolve().parents[2] / "nexcode.config.json"
+    if not config_path.exists() or not config_path.read_text(encoding="utf-8").strip():
+        return {}
+
+    try:
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"Invalid nexcode.config.json: {exc}") from exc
+
+    if not isinstance(config, dict):
+        raise RuntimeError("nexcode.config.json must contain a JSON object")
+
+    for section in ("standards", "github", "deployment", "llm"):
+        if section in config and not isinstance(config[section], dict):
+            raise RuntimeError(f"nexcode.config.json section '{section}' must be an object")
+    return config

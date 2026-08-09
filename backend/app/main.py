@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.llm import get_cohere_response, get_cohere_stream_response
 from app.schemas import AIRequest, BaseInput, CodeRequest, PromptRequest, PipelineRequest
 from app.pipeline.agent import run_pipeline
-from app.config import get_settings
+from app.config import get_nexcode_config, get_settings
 from app.independent_api import independent_api
 
 # Configure logging
@@ -239,16 +239,22 @@ async def independent_stream_complete(request: BaseInput):
 async def run_pipeline_background(job_id: str, request: PipelineRequest):
     logger.info(f"Starting pipeline job {job_id}")
     try:
+        project_config = get_nexcode_config()
+        standards = project_config.get("standards", {})
+        github = project_config.get("github", {})
+        deployment = project_config.get("deployment", {})
+        banned_keywords = request.banned_keywords or standards.get("banned_keywords", [])
+        max_function_lines = request.max_function_lines or standards.get("max_function_lines", 50)
         # Note: run_pipeline is currently synchronous. We could run it in a threadpool
         # if it's heavily blocking, but BackgroundTasks will run it in a separate thread anyway.
         result = await run_pipeline(
             code=request.code,
             language=request.language,
-            repo=request.repo,
-            base_branch=request.base_branch,
-            github_token=request.github_token,
-            banned_keywords=request.banned_keywords,
-            max_function_lines=request.max_function_lines,
+            repo=request.repo or github.get("repo", ""),
+            base_branch=request.base_branch or github.get("base_branch", "main"),
+            github_token=request.github_token or github.get("token", ""),
+            banned_keywords=banned_keywords,
+            max_function_lines=max_function_lines,
         )
         pipeline_jobs[job_id] = result
         logger.info(f"Finished pipeline job {job_id}")
@@ -282,21 +288,27 @@ async def pipeline_status(job_id: str):
 async def pipeline_pr(request: PipelineRequest):
     """Run scan + create PR in one call. Requires repo and github_token."""
 
-    if not request.repo or not request.github_token:
+    project_config = get_nexcode_config()
+    github = project_config.get("github", {})
+    repo = request.repo or github.get("repo", "")
+    github_token = request.github_token or github.get("token", "")
+    if not repo or not github_token:
         raise HTTPException(status_code=400, detail="repo and github_token are required")
 
     logger.info("Running pipeline PR")
     try:
+        standards = project_config.get("standards", {})
+        deployment = project_config.get("deployment", {})
         # Since this creates a PR synchronously in one go, we can just run it.
         # Alternatively, it could be pushed to BackgroundTasks as well if it takes too long.
         result = await run_pipeline(
             code=request.code,
             language=request.language,
-            repo=request.repo,
-            base_branch=request.base_branch,
-            github_token=request.github_token,
-            banned_keywords=request.banned_keywords,
-            max_function_lines=request.max_function_lines,
+            repo=repo,
+            base_branch=request.base_branch or github.get("base_branch", "main"),
+            github_token=github_token,
+            banned_keywords=request.banned_keywords or standards.get("banned_keywords", []),
+            max_function_lines=request.max_function_lines or standards.get("max_function_lines", 50),
         )
         return {"result": result}
     except Exception as e:
