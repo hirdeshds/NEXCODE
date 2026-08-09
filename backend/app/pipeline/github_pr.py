@@ -54,7 +54,7 @@ def create_pull_request(repo: str, base_branch: str, github_token: str,
         )
 
         # Create Pull Request
-        pr_body = f"""## 🤖 NexCode AI — Automated Pull Request
+        pr_body = f"""##  NexCode AI — Automated Pull Request
 
 This PR was created automatically by **NexCode Bot** after the code passed all 3 AI scanning stages.
 
@@ -64,7 +64,7 @@ This PR was created automatically by **NexCode Bot** after the code passed all 3
 
 ---
 
-> ✅ All stages passed. This code is ready for human review.
+>  All stages passed. This code is ready for human review.
 """
 
         pr = repository.create_pull(
