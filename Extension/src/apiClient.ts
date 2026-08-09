@@ -111,14 +111,49 @@ export async function streamCompleteCode(code: string, onChunk: (chunk: string) 
       },
       (response) => {
         response.setEncoding("utf8");
+        let buffer = "";
+
         response.on("data", (chunk) => {
-          onChunk(chunk);
+          buffer += chunk;
+          const events = buffer.split("\n\n");
+          buffer = events.pop() ?? "";
+
+          for (const event of events) {
+            const data = event
+              .split("\n")
+              .filter((line) => line.startsWith("data:"))
+              .map((line) => line.slice(5).trimStart())
+              .join("\n");
+
+            if (!data || data === "[DONE]") {
+              continue;
+            }
+
+            try {
+              const parsed = JSON.parse(data) as { text?: string };
+              onChunk(parsed.text ?? data);
+            } catch {
+              onChunk(data);
+            }
+          }
         });
 
         response.on("end", () => {
           if (!response.statusCode || response.statusCode >= 400) {
             reject(new Error(`Backend error ${response.statusCode}`));
             return;
+          }
+
+          if (buffer.startsWith("data:")) {
+            const data = buffer.slice(5).trim();
+            if (data && data !== "[DONE]") {
+              try {
+                const parsed = JSON.parse(data) as { text?: string };
+                onChunk(parsed.text ?? data);
+              } catch {
+                onChunk(data);
+              }
+            }
           }
           resolve();
         });

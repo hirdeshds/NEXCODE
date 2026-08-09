@@ -36,15 +36,40 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.NexCodeCompletionProvider = void 0;
 const vscode = __importStar(require("vscode"));
 const apiClient_1 = require("./apiClient");
+const config_1 = require("./config");
+const COMPLETION_DEBOUNCE_MS = 400;
+const MAX_CONTEXT_LINES = 50;
+function waitForDebounce(token) {
+    return new Promise((resolve) => {
+        const timer = setTimeout(() => {
+            disposable.dispose();
+            resolve(!token.isCancellationRequested);
+        }, COMPLETION_DEBOUNCE_MS);
+        const disposable = token.onCancellationRequested(() => {
+            clearTimeout(timer);
+            disposable.dispose();
+            resolve(false);
+        });
+    });
+}
+function getCompletionContext(document, position) {
+    const prefix = document.getText(new vscode.Range(new vscode.Position(0, 0), position));
+    return prefix.split("\n").slice(-MAX_CONTEXT_LINES).join("\n");
+}
 class NexCodeCompletionProvider {
-    async provideInlineCompletionItems(document, position) {
-        // Provide ghost text completion using the text before the cursor
-        const codeContext = document.getText(new vscode.Range(new vscode.Position(0, 0), position));
-        if (!codeContext.trim()) {
+    async provideInlineCompletionItems(document, position, _context, token) {
+        if (!(0, config_1.isInlineCompletionEnabled)() || !(await waitForDebounce(token))) {
+            return [];
+        }
+        const codeContext = getCompletionContext(document, position);
+        if (!codeContext.trim() || token.isCancellationRequested) {
             return [];
         }
         try {
             const code = await (0, apiClient_1.completeCode)(codeContext);
+            if (token.isCancellationRequested) {
+                return [];
+            }
             return [
                 new vscode.InlineCompletionItem(code, new vscode.Range(position, position)),
             ];

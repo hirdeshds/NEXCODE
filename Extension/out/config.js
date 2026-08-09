@@ -34,6 +34,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getBackendUrl = getBackendUrl;
+exports.isInlineCompletionEnabled = isInlineCompletionEnabled;
 const vscode = __importStar(require("vscode"));
 const DEFAULT_BACKEND_URL = "https://nexcode-3n9e.onrender.com";
 function getBackendUrl() {
@@ -41,5 +42,10 @@ function getBackendUrl() {
         .getConfiguration("nexcode")
         .get("backendUrl", DEFAULT_BACKEND_URL);
     return configuredUrl.replace(/\/$/, "");
+}
+function isInlineCompletionEnabled() {
+    return vscode.workspace
+        .getConfiguration("nexcode")
+        .get("enableInlineCompletion", true);
 }
 //# sourceMappingURL=config.js.map
