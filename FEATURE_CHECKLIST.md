@@ -37,10 +37,10 @@ Last reviewed: 2026-08-09
 - [x] Inline completion context truncation
 - [x] Inline completion enable/disable setting
 - [x] Extension streaming client and SSE parsing
-- [ ] Generate command replacing selected editor content
-- [ ] Project parser path traversal protection
-- [ ] Strict project response validation
-- [ ] Sandbox execution for non-Python languages
+- [x] Generate command replacing selected editor content
+- [x] Project parser path traversal protection
+- [x] Strict project response validation
+- [x] Sandbox execution for non-Python languages
 - [ ] Loading pipeline standards from `nexcode.config.json`
 - [ ] Loading GitHub and deployment configuration from `nexcode.config.json`
 - [ ] Extension integration with pipeline routes

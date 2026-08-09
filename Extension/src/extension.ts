@@ -123,11 +123,15 @@ export function activate(context: vscode.ExtensionContext): void {
       );
 
       if (code) {
-        const document = await vscode.workspace.openTextDocument({
-          content: code,
-          language: "plaintext",
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+          vscode.window.showWarningMessage("Open a file before generating code.");
+          return;
+        }
+
+        await editor.edit((editBuilder) => {
+          editBuilder.replace(editor.selection, code);
         });
-        await vscode.window.showTextDocument(document, { preview: false });
       }
     }),
   );

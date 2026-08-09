@@ -27,18 +27,38 @@ Code:
 ```"""
 
 
-def run_code_in_docker(code: str, timeout: int = 10) -> dict:
-    """Run Python code inside a Docker container and capture output."""
+LANGUAGE_COMMANDS = {
+    "python": ("python:3.12-slim", ["python", "-c"]),
+    "javascript": ("node:22-slim", ["node", "-e"]),
+    "js": ("node:22-slim", ["node", "-e"]),
+    "ruby": ("ruby:3.3-slim", ["ruby", "-e"]),
+    "php": ("php:8.3-cli", ["php", "-r"]),
+}
+
+
+def run_code_in_docker(code: str, language: str = "python", timeout: int = 10) -> dict:
+    """Run supported language code inside an isolated Docker container."""
+    language_key = language.lower().strip()
+    runtime = LANGUAGE_COMMANDS.get(language_key)
+    if not runtime:
+        return {
+            "stdout": "",
+            "stderr": f"Unsupported sandbox language: {language}",
+            "exit_code": -1,
+        }
+
+    image, command = runtime
 
     try:
         client = docker.from_env()
 
         result = client.containers.run(
-            image="python:3.12-slim",
-            command=["python", "-c", code],
+            image=image,
+            command=[*command, code],
             remove=True,
             network_disabled=True,
             mem_limit="128m",
+            pids_limit=64,
             timeout=timeout,
             stderr=True,
         )
@@ -75,11 +95,8 @@ async def run_stage3(code: str, language: str) -> dict:
     if "STATUS: FAIL" in analysis.upper():
         ai_status = "fail"
 
-    # Part 2: Run in Docker (Python only for now)
-    sandbox_result = {"stdout": "", "stderr": "", "exit_code": 0}
-
-    if language.lower() == "python":
-        sandbox_result = run_code_in_docker(code)
+    # Part 2: Run supported languages in Docker.
+    sandbox_result = run_code_in_docker(code, language)
 
     # Overall: fail if AI scan failed OR code crashed
     overall_status = "pass"

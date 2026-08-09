@@ -35,12 +35,36 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.applyProjectStructure = applyProjectStructure;
 const vscode = __importStar(require("vscode"));
+const path = __importStar(require("path"));
+function getSafeRelativePath(filePath, workspaceRoot) {
+    const normalized = filePath.replace(/\\/g, "/").trim();
+    if (!normalized || path.posix.isAbsolute(normalized)) {
+        return undefined;
+    }
+    const segments = normalized.split("/");
+    if (segments.some((segment) => !segment || segment === "." || segment === "..")) {
+        return undefined;
+    }
+    const absolutePath = path.resolve(workspaceRoot.fsPath, ...segments);
+    const relativePath = path.relative(workspaceRoot.fsPath, absolutePath);
+    if (!relativePath || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) {
+        return undefined;
+    }
+    return normalized;
+}
 async function applyProjectStructure(response, workspaceRoot) {
     const regex = /<file\s+path="([^"]+)">\s*([\s\S]*?)<\/file>/gi;
     let match;
     let filesCreated = 0;
+    let invalidFiles = 0;
+    const filePaths = new Set();
     while ((match = regex.exec(response)) !== null) {
-        const filePath = match[1];
+        const filePath = getSafeRelativePath(match[1], workspaceRoot);
+        if (!filePath || filePaths.has(filePath)) {
+            invalidFiles++;
+            continue;
+        }
+        filePaths.add(filePath);
         let fileContent = match[2];
         // If the LLM wraps the content in markdown code blocks inside the file tag, strip it.
         if (fileContent.trim().startsWith("\`\`\`")) {
@@ -50,19 +74,21 @@ async function applyProjectStructure(response, workspaceRoot) {
         else {
             fileContent = fileContent.trimEnd(); // Just clean trailing spaces
         }
-        const absoluteUri = vscode.Uri.joinPath(workspaceRoot, filePath);
+        const absoluteUri = vscode.Uri.joinPath(workspaceRoot, ...filePath.split("/"));
         // Ensure the parent directory exists
         if (filePath.includes('/')) {
             const dirPath = filePath.substring(0, filePath.lastIndexOf('/'));
-            const dirUri = vscode.Uri.joinPath(workspaceRoot, dirPath);
+            const dirUri = vscode.Uri.joinPath(workspaceRoot, ...dirPath.split("/"));
             await vscode.workspace.fs.createDirectory(dirUri);
         }
         const data = Buffer.from(fileContent, "utf8");
         await vscode.workspace.fs.writeFile(absoluteUri, data);
         filesCreated++;
     }
-    if (filesCreated === 0) {
-        vscode.window.showWarningMessage("No valid <file> tags were found in the response.");
+    if (filesCreated === 0 || invalidFiles > 0) {
+        vscode.window.showWarningMessage(filesCreated === 0
+            ? "No valid project files were found in the response."
+            : `Created ${filesCreated} files; rejected ${invalidFiles} invalid or duplicate paths.`);
     }
     else {
         vscode.window.showInformationMessage(`Successfully created ${filesCreated} files in your workspace.`);

@@ -117,11 +117,14 @@ function activate(context) {
         }
         const code = await runWithProgress("NexCode is generating code...", () => (0, apiClient_1.generateCode)(prompt));
         if (code) {
-            const document = await vscode.workspace.openTextDocument({
-                content: code,
-                language: "plaintext",
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) {
+                vscode.window.showWarningMessage("Open a file before generating code.");
+                return;
+            }
+            await editor.edit((editBuilder) => {
+                editBuilder.replace(editor.selection, code);
             });
-            await vscode.window.showTextDocument(document, { preview: false });
         }
     }));
     context.subscriptions.push(vscode.commands.registerCommand("nexcode.generateProject", async () => {
