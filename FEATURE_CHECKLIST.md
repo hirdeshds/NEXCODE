@@ -33,10 +33,10 @@ Last reviewed: 2026-08-09
 
 ## Partial Or Needs Hardening
 
-- [ ] Inline completion debounce
-- [ ] Inline completion context truncation
-- [ ] Inline completion enable/disable setting
-- [ ] Extension streaming client and SSE parsing
+- [x] Inline completion debounce
+- [x] Inline completion context truncation
+- [x] Inline completion enable/disable setting
+- [x] Extension streaming client and SSE parsing
 - [ ] Generate command replacing selected editor content
 - [ ] Project parser path traversal protection
 - [ ] Strict project response validation

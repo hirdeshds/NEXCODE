@@ -9,3 +9,9 @@ export function getBackendUrl(): string {
 
   return configuredUrl.replace(/\/$/, "");
 }
+
+export function isInlineCompletionEnabled(): boolean {
+  return vscode.workspace
+    .getConfiguration("nexcode")
+    .get<boolean>("enableInlineCompletion", true);
+}

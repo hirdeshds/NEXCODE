@@ -44,6 +44,11 @@
           "type": "string",
           "default": "https://nexcode-3n9e.onrender.com",
           "description": "Base URL of the NexCode FastAPI backend."
+        },
+        "nexcode.enableInlineCompletion": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable NexCode inline code completions."
         }
       }
     },

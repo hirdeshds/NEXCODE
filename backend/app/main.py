@@ -1,3 +1,4 @@
+import json
 import uuid
 import logging
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
@@ -23,6 +24,12 @@ app = FastAPI(
 pipeline_jobs = {}
 
 settings = get_settings()
+
+
+async def stream_as_sse(chunks):
+    async for chunk in chunks:
+        yield f"data: {json.dumps({'text': chunk})}\n\n"
+    yield "data: [DONE]\n\n"
 
 app.add_middleware(
     CORSMiddleware,
@@ -142,7 +149,7 @@ async def stream_complete_code(request: BaseInput):
     """Streaming version of /complete that returns code chunk by chunk."""
     logger.info("Streaming complete code")
     return StreamingResponse(
-        get_cohere_stream_response(request.get_input(), feature_type="complete"),
+        stream_as_sse(get_cohere_stream_response(request.get_input(), feature_type="complete")),
         media_type="text/event-stream"
     )
 
@@ -221,7 +228,7 @@ async def independent_complete(request: BaseInput):
 async def independent_stream_complete(request: BaseInput):
     logger.info("Independent stream complete")
     return StreamingResponse(
-        independent_api.stream_response(request.get_input(), feature_type="complete"),
+        stream_as_sse(independent_api.stream_response(request.get_input(), feature_type="complete")),
         media_type="text/event-stream"
     )
 
