@@ -287,11 +287,23 @@ python -m venv venv
 venv\Scripts\activate
  
 # Install all dependencies
-pip install fastapi uvicorn anthropic cohere PyGithub docker celery redis httpx python-dotenv pydantic
+pip install -r requirements.txt
  
 # Create .env file and add your keys:
 # ANTHROPIC_API_KEY=sk-ant-...
-# COHERE_API_KEY=...
+# Choose any OpenAI-compatible provider (OpenAI, Ollama, vLLM, LiteLLM, etc.).
+LLM_PROVIDER=openai-compatible
+LLM_API_KEY=your_api_key
+LLM_BASE_URL=https://api.openai.com/v1
+LLM_MODEL=gpt-4o-mini
+
+# Or use Cohere:
+# LLM_PROVIDER=cohere
+# COHERE_API_KEY=your_cohere_api_key
+# COHERE_MODEL=command-r-08-2024
+
+# For a local provider with no API key:
+# LLM_PROVIDER=local
 # GITHUB_TOKEN=ghp_...
  
 # Start the server

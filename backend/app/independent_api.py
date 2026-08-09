@@ -1,8 +1,5 @@
-import asyncio
 from typing import AsyncGenerator
-from app.config import get_settings
-from app.prompts import get_system_prompt
-from app.llm import get_cohere_client
+from app.llm import get_llm_response, get_llm_stream_response
 
 
 class LocalProvider:
@@ -32,54 +29,15 @@ class LocalProvider:
             yield full[i:i+chunk_size]
 
 
-class CohereProvider:
-    """Cohere-backed provider for independent API endpoints."""
-
-    async def chat(self, prompt: str, feature_type: str) -> str:
-        settings = get_settings()
-        co = get_cohere_client()
-        res = await co.chat(
-            model=settings.cohere_model,
-            messages=[
-                {"role": "system", "content": get_system_prompt(feature_type)},
-                {"role": "user", "content": prompt}
-            ]
-        )
-        return res.message.content[0].text
-
-    def stream(self, prompt: str, feature_type: str) -> AsyncGenerator[str, None]:
-        settings = get_settings()
-        co = get_cohere_client()
-        res = co.chat_stream(
-            model=settings.cohere_model,
-            messages=[
-                {"role": "system", "content": get_system_prompt(feature_type)},
-                {"role": "user", "content": prompt}
-            ]
-        )
-
-        async def _iter():
-            async for event in res:
-                if event and event.type == "content-delta":
-                    yield event.delta.message.content.text
-
-        return _iter()
-
-
 class IndependentAPI:
     def __init__(self):
-        settings = get_settings()
-        provider = (settings.independent_api_provider or "local").lower()
-        if provider == "cohere":
-            self._provider = CohereProvider()
-        else:
-            self._provider = LocalProvider()
+        pass
 
     async def respond(self, prompt: str, feature_type: str) -> str:
-        return await self._provider.chat(prompt, feature_type)
+        return await get_llm_response(prompt, feature_type)
 
     def stream_response(self, prompt: str, feature_type: str) -> AsyncGenerator[str, None]:
-        return self._provider.stream(prompt, feature_type)
+        return get_llm_stream_response(prompt, feature_type)
 
 
 # module-level instance for easy imports
