@@ -1,3 +1,4 @@
 .env
 Extension/node_modules/
 report.txt
+__pycache__/
