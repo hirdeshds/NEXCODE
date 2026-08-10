@@ -15,7 +15,8 @@
     "onCommand:nexcode.fixCode",
     "onCommand:nexcode.generateCode",
     "onCommand:nexcode.generateProject",
-    "onCommand:nexcode.reviewCode"
+    "onCommand:nexcode.reviewCode",
+    "onCommand:nexcode.runPipeline"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -72,6 +73,10 @@
       {
         "command": "nexcode.reviewCode",
         "title": "NexCode: Review Code"
+      },
+      {
+        "command": "nexcode.runPipeline",
+        "title": "NexCode: Run Pipeline Scan"
       }
     ],
     "menus": {
@@ -104,6 +109,9 @@
         },
         {
           "command": "nexcode.reviewCode"
+        },
+        {
+          "command": "nexcode.runPipeline"
         }
       ]
     }

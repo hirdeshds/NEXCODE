@@ -43,8 +43,8 @@ Last reviewed: 2026-08-09
 - [x] Sandbox execution for non-Python languages
 - [x] Loading pipeline standards from `nexcode.config.json`
 - [x] Loading GitHub and deployment configuration from `nexcode.config.json`
-- [ ] Extension integration with pipeline routes
-- [ ] Pipeline result notifications in VS Code
+- [x] Extension integration with pipeline routes
+- [x] Pipeline result notifications in VS Code
 - [ ] Durable pipeline job storage
 - [ ] Production queue workers
 - [ ] Extension bundling and packaging configuration

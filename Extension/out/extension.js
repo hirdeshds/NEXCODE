@@ -71,6 +71,42 @@ async function runWithProgress(title, task) {
         return undefined;
     }
 }
+function getPipelineLanguage(document) {
+    const language = document.languageId.toLowerCase();
+    const supportedLanguages = new Set(["python", "javascript", "js", "ruby", "php"]);
+    if (!supportedLanguages.has(language)) {
+        vscode.window.showWarningMessage(`NexCode pipeline does not support the ${document.languageId} language yet.`);
+        return undefined;
+    }
+    return language;
+}
+function formatPipelineResult(result) {
+    return `# NexCode Pipeline Result\n\n\`\`\`json\n${JSON.stringify(result, null, 2)}\n\`\`\``;
+}
+async function waitForPipeline(jobId) {
+    for (let attempt = 0; attempt < 60; attempt += 1) {
+        const result = await (0, apiClient_1.getPipelineStatus)(jobId);
+        if (result.overall_status !== "processing") {
+            return result;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+    }
+    throw new Error("The pipeline did not finish within five minutes.");
+}
+function notifyPipelineResult(result) {
+    const status = result.overall_status ?? "unknown";
+    const prUrl = result.pr?.pr_url;
+    if (status === "passed") {
+        const message = prUrl
+            ? `NexCode pipeline passed. Pull request: ${prUrl}`
+            : "NexCode pipeline passed all stages.";
+        vscode.window.showInformationMessage(message);
+        return;
+    }
+    const failedStage = status.match(/^failed_(stage[1-3])/i)?.[1];
+    const detail = failedStage ? ` at ${failedStage}` : "";
+    vscode.window.showWarningMessage(`NexCode pipeline finished${detail} with status: ${status}.`);
+}
 function activate(context) {
     const statusBar = new statusBar_1.NexCodeStatusBar();
     statusBar.show();
@@ -144,6 +180,25 @@ function activate(context) {
         if (response) {
             const workspaceRoot = workspaceFolders[0].uri;
             await (0, projectParser_1.applyProjectStructure)(response, workspaceRoot);
+        }
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("nexcode.runPipeline", async () => {
+        const editor = vscode.window.activeTextEditor;
+        const code = getSelectedOrFullText();
+        if (!editor || !code) {
+            return;
+        }
+        const language = getPipelineLanguage(editor.document);
+        if (!language) {
+            return;
+        }
+        const result = await runWithProgress("NexCode is scanning your code...", async () => {
+            const jobId = await (0, apiClient_1.startPipelineScan)(code, language);
+            return waitForPipeline(jobId);
+        });
+        if (result) {
+            notifyPipelineResult(result);
+            await (0, diffView_1.showMarkdownResult)("NexCode Pipeline Result", formatPipelineResult(result));
         }
     }));
     context.subscriptions.push(vscode.languages.registerCodeActionsProvider({ scheme: "file" }, new codeActions_1.NexCodeActionProvider(), {

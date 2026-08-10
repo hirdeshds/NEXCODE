@@ -5,6 +5,22 @@ import { getBackendUrl } from "./config";
 
 type HttpMethod = "GET" | "POST";
 
+export interface PipelineStageResult {
+  status?: string;
+  analysis?: string;
+  [key: string]: unknown;
+}
+
+export interface PipelineResult {
+  overall_status?: string;
+  stage1?: PipelineStageResult | null;
+  stage2?: PipelineStageResult | null;
+  stage3?: PipelineStageResult | null;
+  pr?: { status?: string; pr_url?: string; [key: string]: unknown } | null;
+  error?: string;
+  [key: string]: unknown;
+}
+
 function requestJson<T>(method: HttpMethod, path: string, body?: unknown): Promise<T> {
   const url = new URL(`${getBackendUrl()}${path}`);
   const payload = body ? JSON.stringify(body) : undefined;
@@ -92,6 +108,19 @@ export async function completeCode(code: string): Promise<string> {
 export async function testCompleteCode(code: string): Promise<string> {
   const response = await requestJson<{ code: string }>("POST", "/test-complete", { code });
   return response.code;
+}
+
+export async function startPipelineScan(code: string, language: string): Promise<string> {
+  const response = await requestJson<{ job_id: string }>("POST", "/pipeline/scan", {
+    code,
+    language,
+  });
+  return response.job_id;
+}
+
+export async function getPipelineStatus(jobId: string): Promise<PipelineResult> {
+  const response = await requestJson<{ result: PipelineResult }>("GET", `/pipeline/status/${jobId}`);
+  return response.result;
 }
 
 export async function streamCompleteCode(code: string, onChunk: (chunk: string) => void): Promise<void> {

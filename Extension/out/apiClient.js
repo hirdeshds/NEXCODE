@@ -40,6 +40,8 @@ exports.reviewCode = reviewCode;
 exports.generateCode = generateCode;
 exports.completeCode = completeCode;
 exports.testCompleteCode = testCompleteCode;
+exports.startPipelineScan = startPipelineScan;
+exports.getPipelineStatus = getPipelineStatus;
 exports.streamCompleteCode = streamCompleteCode;
 const http = __importStar(require("http"));
 const https = __importStar(require("https"));
@@ -116,6 +118,17 @@ async function completeCode(code) {
 async function testCompleteCode(code) {
     const response = await requestJson("POST", "/test-complete", { code });
     return response.code;
+}
+async function startPipelineScan(code, language) {
+    const response = await requestJson("POST", "/pipeline/scan", {
+        code,
+        language,
+    });
+    return response.job_id;
+}
+async function getPipelineStatus(jobId) {
+    const response = await requestJson("GET", `/pipeline/status/${jobId}`);
+    return response.result;
 }
 async function streamCompleteCode(code, onChunk) {
     const url = new url_1.URL(`${(0, config_1.getBackendUrl)()}/stream/complete`);

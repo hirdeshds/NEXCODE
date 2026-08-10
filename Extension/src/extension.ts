@@ -1,5 +1,14 @@
 import * as vscode from "vscode";
-import { explainCode, fixCode, generateCode, completeCode, reviewCode } from "./apiClient";
+import {
+  explainCode,
+  fixCode,
+  generateCode,
+  completeCode,
+  reviewCode,
+  getPipelineStatus,
+  startPipelineScan,
+  PipelineResult,
+} from "./apiClient";
 import { NexCodeActionProvider } from "./codeActions";
 import { NexCodeCompletionProvider } from "./completionProvider";
 import { showFixedCode, showMarkdownResult } from "./diffView";
@@ -41,6 +50,54 @@ async function runWithProgress<T>(title: string, task: () => Promise<T>): Promis
     vscode.window.showErrorMessage(`NexCode failed: ${message}`);
     return undefined;
   }
+}
+
+function getPipelineLanguage(document: vscode.TextDocument): string | undefined {
+  const language = document.languageId.toLowerCase();
+  const supportedLanguages = new Set(["python", "javascript", "js", "ruby", "php"]);
+
+  if (!supportedLanguages.has(language)) {
+    vscode.window.showWarningMessage(
+      `NexCode pipeline does not support the ${document.languageId} language yet.`,
+    );
+    return undefined;
+  }
+
+  return language;
+}
+
+function formatPipelineResult(result: PipelineResult): string {
+  return `# NexCode Pipeline Result\n\n\`\`\`json\n${JSON.stringify(result, null, 2)}\n\`\`\``;
+}
+
+async function waitForPipeline(jobId: string): Promise<PipelineResult> {
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    const result = await getPipelineStatus(jobId);
+    if (result.overall_status !== "processing") {
+      return result;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+  }
+
+  throw new Error("The pipeline did not finish within five minutes.");
+}
+
+function notifyPipelineResult(result: PipelineResult): void {
+  const status = result.overall_status ?? "unknown";
+  const prUrl = result.pr?.pr_url;
+
+  if (status === "passed") {
+    const message = prUrl
+      ? `NexCode pipeline passed. Pull request: ${prUrl}`
+      : "NexCode pipeline passed all stages.";
+    vscode.window.showInformationMessage(message);
+    return;
+  }
+
+  const failedStage = status.match(/^failed_(stage[1-3])/i)?.[1];
+  const detail = failedStage ? ` at ${failedStage}` : "";
+  vscode.window.showWarningMessage(`NexCode pipeline finished${detail} with status: ${status}.`);
 }
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -160,6 +217,31 @@ export function activate(context: vscode.ExtensionContext): void {
       if (response) {
         const workspaceRoot = workspaceFolders[0].uri;
         await applyProjectStructure(response, workspaceRoot);
+      }
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("nexcode.runPipeline", async () => {
+      const editor = vscode.window.activeTextEditor;
+      const code = getSelectedOrFullText();
+      if (!editor || !code) {
+        return;
+      }
+
+      const language = getPipelineLanguage(editor.document);
+      if (!language) {
+        return;
+      }
+
+      const result = await runWithProgress("NexCode is scanning your code...", async () => {
+        const jobId = await startPipelineScan(code, language);
+        return waitForPipeline(jobId);
+      });
+
+      if (result) {
+        notifyPipelineResult(result);
+        await showMarkdownResult("NexCode Pipeline Result", formatPipelineResult(result));
       }
     }),
   );
