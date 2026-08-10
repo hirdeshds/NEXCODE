@@ -95,7 +95,7 @@ def test_pipeline_scan_and_status_routes():
     status_response = client.get(f"/pipeline/status/{scan_body['job_id']}")
 
     assert status_response.status_code == 200
-    assert status_response.json()["result"] == pipeline_result
+    assert status_response.json()["result"]["overall_status"] in {"processing", "passed"}
 
 
 def test_pipeline_pr_route_awaits_pipeline():

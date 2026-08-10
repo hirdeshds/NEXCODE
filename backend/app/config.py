@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     cohere_model: str = "command-r-08-2024"
     independent_api_provider: str = ""
     cors_origins: str = "*"
+    pipeline_db_path: str = "data/pipeline_jobs.sqlite3"
+    pipeline_worker_count: int = 2
+    pipeline_worker_poll_seconds: float = 0.5
 
     model_config = SettingsConfigDict(
         env_file=".env",

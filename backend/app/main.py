@@ -1,12 +1,15 @@
 import json
 import uuid
 import logging
-from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
+import asyncio
+from contextlib import suppress
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.llm import get_cohere_response, get_cohere_stream_response
 from app.schemas import AIRequest, BaseInput, CodeRequest, PromptRequest, PipelineRequest
 from app.pipeline.agent import run_pipeline
+from app.pipeline.job_store import PipelineJobStore
 from app.config import get_nexcode_config, get_settings
 from app.independent_api import independent_api
 
@@ -20,16 +23,75 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Simple in-memory store for pipeline job results
-pipeline_jobs = {}
-
 settings = get_settings()
+pipeline_job_store = PipelineJobStore(settings.pipeline_db_path)
+pipeline_workers: list[asyncio.Task] = []
+
+
+def has_active_pipeline_worker() -> bool:
+    current_loop = asyncio.get_running_loop()
+    return any(
+        not worker.done()
+        and worker.get_loop() is current_loop
+        and worker.get_loop().is_running()
+        for worker in pipeline_workers
+    )
 
 
 async def stream_as_sse(chunks):
     async for chunk in chunks:
         yield f"data: {json.dumps({'text': chunk})}\n\n"
     yield "data: [DONE]\n\n"
+
+
+async def process_next_pipeline_job() -> bool:
+    job = pipeline_job_store.claim_next()
+    if job is None:
+        return False
+
+    job_id, request = job
+    try:
+        result = await run_pipeline(
+            code=request["code"],
+            language=request["language"],
+            repo=request.get("repo", ""),
+            base_branch=request.get("base_branch", ""),
+            github_token=request.get("github_token", ""),
+            banned_keywords=request.get("banned_keywords", []),
+            max_function_lines=request.get("max_function_lines"),
+        )
+        pipeline_job_store.complete(job_id, result)
+    except Exception as exc:
+        logger.error("Pipeline job %s failed: %s", job_id, exc, exc_info=True)
+        pipeline_job_store.fail(job_id, str(exc))
+    return True
+
+
+async def pipeline_worker(worker_id: int) -> None:
+    logger.info("Started pipeline worker %s", worker_id)
+    while True:
+        processed = await process_next_pipeline_job()
+        if not processed:
+            await asyncio.sleep(settings.pipeline_worker_poll_seconds)
+
+
+@app.on_event("startup")
+async def start_pipeline_workers() -> None:
+    worker_count = max(1, settings.pipeline_worker_count)
+    pipeline_workers.extend(
+        asyncio.create_task(pipeline_worker(worker_id))
+        for worker_id in range(worker_count)
+    )
+
+
+@app.on_event("shutdown")
+async def stop_pipeline_workers() -> None:
+    for worker in pipeline_workers:
+        worker.cancel()
+    for worker in pipeline_workers:
+        with suppress(asyncio.CancelledError):
+            await worker
+    pipeline_workers.clear()
 
 app.add_middleware(
     CORSMiddleware,
@@ -236,41 +298,14 @@ async def independent_stream_complete(request: BaseInput):
 # ── Pipeline Routes ──────────────────────────────────────────
 
 
-async def run_pipeline_background(job_id: str, request: PipelineRequest):
-    logger.info(f"Starting pipeline job {job_id}")
-    try:
-        project_config = get_nexcode_config()
-        standards = project_config.get("standards", {})
-        github = project_config.get("github", {})
-        deployment = project_config.get("deployment", {})
-        banned_keywords = request.banned_keywords or standards.get("banned_keywords", [])
-        max_function_lines = request.max_function_lines or standards.get("max_function_lines", 50)
-        # Note: run_pipeline is currently synchronous. We could run it in a threadpool
-        # if it's heavily blocking, but BackgroundTasks will run it in a separate thread anyway.
-        result = await run_pipeline(
-            code=request.code,
-            language=request.language,
-            repo=request.repo or github.get("repo", ""),
-            base_branch=request.base_branch or github.get("base_branch", "main"),
-            github_token=request.github_token or github.get("token", ""),
-            banned_keywords=banned_keywords,
-            max_function_lines=max_function_lines,
-        )
-        pipeline_jobs[job_id] = result
-        logger.info(f"Finished pipeline job {job_id}")
-    except Exception as e:
-        logger.error(f"Pipeline job {job_id} failed: {e}")
-        pipeline_jobs[job_id] = {"error": str(e), "overall_status": "failed_internal"}
-
-
 @app.post("/pipeline/scan", tags=["Pipeline"])
-async def pipeline_scan(request: PipelineRequest, background_tasks: BackgroundTasks):
+async def pipeline_scan(request: PipelineRequest):
     """Run 3-stage AI scan on code. Returns job_id to check status."""
     
     job_id = uuid.uuid4().hex[:12]
-    pipeline_jobs[job_id] = {"overall_status": "processing"}
-    
-    background_tasks.add_task(run_pipeline_background, job_id, request)
+    pipeline_job_store.create(job_id, request.model_dump())
+    if not has_active_pipeline_worker():
+        await process_next_pipeline_job()
     return {"job_id": job_id, "status": "processing"}
 
 
@@ -278,10 +313,11 @@ async def pipeline_scan(request: PipelineRequest, background_tasks: BackgroundTa
 async def pipeline_status(job_id: str):
     """Check pipeline job status by job_id."""
 
-    if job_id not in pipeline_jobs:
+    result = pipeline_job_store.get(job_id)
+    if result is None:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    return {"job_id": job_id, "result": pipeline_jobs[job_id]}
+    return {"job_id": job_id, "result": result}
 
 
 @app.post("/pipeline/pr", tags=["Pipeline"])
