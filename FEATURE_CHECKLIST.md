@@ -59,6 +59,10 @@ Last reviewed: 2026-08-09
 - [ ] Registered pipeline command in the extension
 - [ ] Extension automated tests
 
+## Implementation Guide
+
+- [x] Created a complete implementation guide at [MISSING_FEATURES_IMPLEMENTATION_GUIDE.md](MISSING_FEATURES_IMPLEMENTATION_GUIDE.md)
+
 ## Validation
 
 - Backend test suite: **11 passed**
