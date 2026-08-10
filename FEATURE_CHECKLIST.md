@@ -45,9 +45,9 @@ Last reviewed: 2026-08-09
 - [x] Loading GitHub and deployment configuration from `nexcode.config.json`
 - [x] Extension integration with pipeline routes
 - [x] Pipeline result notifications in VS Code
-- [ ] Durable pipeline job storage
-- [ ] Production queue workers
-- [ ] Extension bundling and packaging configuration
+- [x] Durable pipeline job storage
+- [x] Production queue workers
+- [x] Extension bundling and packaging configuration
 
 ## Not Implemented
 

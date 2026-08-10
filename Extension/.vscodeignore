@@ -1,7 +1,10 @@
 src/**
+out/**
+test/**
 node_modules/**
 .vscode/**
 .vscode-test/**
 tsconfig.json
 webpack.config.js
 **/*.map
+*.vsix
