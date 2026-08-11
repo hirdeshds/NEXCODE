@@ -5,6 +5,19 @@
   "version": "0.0.1",
   "license": "Apache-2.0",
   "publisher": "nexcode",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hirdeshds/nexcode"
+  },
+  "homepage": "https://github.com/hirdeshds/nexcode",
+  "bugs": {
+    "url": "https://github.com/hirdeshds/nexcode/issues"
+  },
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#0f172a",
+    "theme": "dark"
+  },
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -121,7 +134,8 @@
     "compile": "tsc -p ./ --noEmit",
     "watch": "tsc -watch -p ./",
     "bundle": "webpack --config webpack.config.js",
-    "package": "npm run bundle && vsce package",
+    "package": "npm run bundle && vsce package --allow-missing-repository",
+    "publish": "npm run bundle && vsce publish --allow-missing-repository",
     "vscode:prepublish": "npm run bundle",
     "prepackage": "npm run bundle"
   },
