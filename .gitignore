@@ -5,3 +5,4 @@ __pycache__/
 .pyc
 Extension/.vscode/
 Extension/nexcode-ai-0.0.1.vsix
+Extension/nexcode-ai-studio-pro-0.0.1.vsix
