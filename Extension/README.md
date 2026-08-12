@@ -1,6 +1,15 @@
-# NexCode
+# NexCode AI Studio
 
-NexCode is an AI-powered VS Code extension that helps developers write, explain, fix, and review code directly in the editor.
+NexCode AI Studio is an AI-powered VS Code extension that helps developers write, explain, fix, and review code directly in the editor.
+
+### Categories
+[Other](https://marketplace.visualstudio.com/search?sortBy=Installs&category=Other&target=VSCode)
+
+### Works with
+- VS Code
+- GitHub
+- GitHub Copilot workflows
+- Azure DevOps
 
 ## Features
 - Inline code completions
