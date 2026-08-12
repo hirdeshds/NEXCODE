@@ -1,6 +1,6 @@
 {
   "name": "nexcode",
-  "displayName": "NexCode",
+  "displayName": "NexCode AI Studio",
   "description": "AI coding helper that connects VS Code to the NexCode backend.",
   "version": "0.0.1",
   "license": "Apache-2.0",
