@@ -3,3 +3,5 @@ Extension/node_modules/
 report.txt
 __pycache__/
 .pyc
+Extension/.vscode/
+Extension/nexcode-ai-0.0.1.vsix
