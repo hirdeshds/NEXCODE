@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="NexCode logo">
+  <rect width="128" height="128" rx="28" fill="#0f172a"/>
+  <path d="M36 40h16l24 34V40h16v48H76L52 54v34H36V40z" fill="#38bdf8"/>
+  <circle cx="96" cy="92" r="8" fill="#f8fafc"/>
+</svg>

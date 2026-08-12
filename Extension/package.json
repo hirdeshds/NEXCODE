@@ -13,7 +13,7 @@
   "bugs": {
     "url": "https://github.com/hirdeshds/nexcode/issues"
   },
-  "icon": "media/icon.png",
+  "icon": "media/icon.svg",
   "galleryBanner": {
     "color": "#0f172a",
     "theme": "dark"
@@ -39,7 +39,7 @@
         {
           "id": "nexcode-sidebar-container",
           "title": "NexCode",
-          "icon": "$(hubot)"
+          "icon": "media/icon.svg"
         }
       ]
     },
