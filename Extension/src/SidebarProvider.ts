@@ -1,4 +1,13 @@
 import * as vscode from "vscode";
+import {
+  explainCode,
+  fixCode,
+  generateCode,
+  completeCode,
+  reviewCode,
+  checkHealth,
+} from "./apiClient";
+import { applyProjectStructure } from "./projectParser";
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
   constructor(private readonly _extensionUri: vscode.Uri) {}
@@ -32,32 +41,37 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
           if (!prompt) return;
           const feature = data.feature || "chat";
           try {
+            let result: string;
+            
             if (feature === "generate-project") {
-              const { completeCode } = require("./apiClient");
-              const { applyProjectStructure } = require("./projectParser");
-              const workspaceFolders = require("vscode").workspace.workspaceFolders;
+              const workspaceFolders = vscode.workspace.workspaceFolders;
               if (!workspaceFolders || workspaceFolders.length === 0) {
                 webviewView.webview.postMessage({ type: "error", value: "Please open a workspace folder first to generate a project." });
                 break;
               }
-              const response = await completeCode(prompt);
-              await applyProjectStructure(response, workspaceFolders[0].uri);
+              result = await completeCode(prompt);
+              await applyProjectStructure(result, workspaceFolders[0].uri);
               webviewView.webview.postMessage({ type: "response", value: "Project structure generated successfully!" });
             } else if (feature === "explain") {
-              const { explainCode } = require("./apiClient");
-              const result = await explainCode(prompt);
+              result = await explainCode(prompt);
               webviewView.webview.postMessage({ type: "response", value: result });
             } else if (feature === "fix") {
-              const { fixCode } = require("./apiClient");
-              const result = await fixCode(prompt);
+              result = await fixCode(prompt);
+              webviewView.webview.postMessage({ type: "response", value: result });
+            } else if (feature === "review") {
+              result = await reviewCode(prompt);
+              webviewView.webview.postMessage({ type: "response", value: result });
+            } else if (feature === "complete") {
+              result = await completeCode(prompt);
               webviewView.webview.postMessage({ type: "response", value: result });
             } else {
-              const { generateCode } = require("./apiClient");
-              const code = await generateCode(prompt);
-              webviewView.webview.postMessage({ type: "response", value: code });
+              result = await generateCode(prompt);
+              webviewView.webview.postMessage({ type: "response", value: result });
             }
           } catch (err: any) {
-            webviewView.webview.postMessage({ type: "error", value: err.message });
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            webviewView.webview.postMessage({ type: "error", value: errorMessage });
+            console.error("Generate error:", err);
           }
           break;
         }
@@ -70,7 +84,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
           break;
         }
         case "moreOptions": {
-          const items = ["Clear Chat", "Export Chat History", "Restart Backend Connection"];
+          const items = ["Clear Chat", "Export Chat History", "Restart Backend Connection", "Check Backend Status"];
           const choice = await vscode.window.showQuickPick(items, {
             placeHolder: "Select an action"
           });
@@ -80,6 +94,13 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             webviewView.webview.postMessage({ type: "exportChat" });
           } else if (choice === "Restart Backend Connection") {
             vscode.window.showInformationMessage("Reconnecting to NexCode backend...");
+          } else if (choice === "Check Backend Status") {
+            const isHealthy = await checkHealth();
+            webviewView.webview.postMessage({ 
+              type: "checkHealth", 
+              status: isHealthy ? "ok" : "error",
+              message: isHealthy ? "Backend is online" : "Backend is offline"
+            });
           }
           break;
         }
@@ -186,12 +207,25 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       padding: 12px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 12px;
+      min-height: 0;
     }
     .message {
       display: flex;
       flex-direction: column;
       gap: 4px;
+      margin-bottom: 4px;
+      animation: slideIn 0.3s ease-out;
+    }
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
     .message.user {
       align-items: flex-end;
@@ -199,19 +233,24 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     .message.user .bubble {
       background-color: var(--vscode-button-background);
       color: var(--vscode-button-foreground);
+      border-radius: 8px 2px 8px 8px;
     }
     .message.assistant .bubble {
       background-color: var(--vscode-editor-background);
       border: 1px solid var(--vscode-widget-border);
       color: var(--vscode-editor-foreground);
+      border-radius: 2px 8px 8px 8px;
     }
     .bubble {
-      padding: 8px 12px;
+      padding: 10px 12px;
       border-radius: 6px;
-      max-width: 90%;
+      max-width: 85%;
       word-wrap: break-word;
       font-size: 13px;
+      line-height: 1.5;
       white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: break-word;
     }
     .input-area {
       padding: 12px;
@@ -325,6 +364,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             <option value="generate-project">Generate Project</option>
             <option value="explain">Explain Code</option>
             <option value="fix">Fix Code</option>
+            <option value="review">Review Code</option>
+            <option value="complete">Complete Code</option>
           </select>
         </div>
         <div class="right-actions">
@@ -351,9 +392,25 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       msgDiv.className = 'message ' + role;
       const bubble = document.createElement('div');
       bubble.className = 'bubble';
-      bubble.textContent = text;
+      
+      // Handle code blocks and formatting
+      if (text && typeof text === 'string') {
+        // Preserve line breaks and format
+        const lines = text.split('\n');
+        lines.forEach((line, index) => {
+          if (index > 0) {
+            bubble.appendChild(document.createElement('br'));
+          }
+          const span = document.createElement('span');
+          span.textContent = line;
+          bubble.appendChild(span);
+        });
+      } else {
+        bubble.textContent = text || '';
+      }
+      
       msgDiv.appendChild(bubble);
-      chatContainer.insertBefore(msgDiv, loader);
+      chatContainer.appendChild(msgDiv);
       chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 
@@ -381,7 +438,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
     window.addEventListener('message', event => {
       const message = event.data;
-      if (message.type !== 'insertCode' && message.type !== 'attachedFile') {
+      if (message.type !== 'insertCode' && message.type !== 'attachedFile' && message.type !== 'checkHealth') {
         loader.style.display = 'none';
       }
       switch (message.type) {
@@ -390,6 +447,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
           break;
         case 'error':
           appendMessage('assistant', 'Error: ' + message.value);
+          break;
+        case 'checkHealth':
+          appendMessage('assistant', message.status === 'ok' ? 'Backend is online ✓' : 'Backend is offline ✗');
           break;
         case 'insertCode':
           input.value += message.value;
@@ -406,15 +466,21 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
           appendMessage('assistant', '📎 Attached: ' + message.fileName);
           break;
         case 'clearChat':
-          var messages = chatContainer.querySelectorAll('.message');
-          messages.forEach(function(m) { m.remove(); });
-          var welcome = document.createElement('div');
-          welcome.className = 'message assistant';
-          var wb = document.createElement('div');
-          wb.className = 'bubble';
-          wb.textContent = "Hello! Describe what you'd like to build.";
-          welcome.appendChild(wb);
-          chatContainer.insertBefore(welcome, loader);
+          var allMessages = chatContainer.querySelectorAll('.message:not(#welcome-message)');
+          allMessages.forEach(function(m) { m.remove(); });
+          loader.style.display = 'none';
+          // Ensure welcome message is visible
+          var welcome = document.getElementById('welcome-message');
+          if (!welcome) {
+            var welcomeDiv = document.createElement('div');
+            welcomeDiv.id = 'welcome-message';
+            welcomeDiv.className = 'message assistant';
+            var wb = document.createElement('div');
+            wb.className = 'bubble';
+            wb.textContent = "Hello! Describe what you'd like to build.";
+            welcomeDiv.appendChild(wb);
+            chatContainer.insertBefore(welcomeDiv, loader);
+          }
           break;
         case 'exportChat':
           var chatText = '';
