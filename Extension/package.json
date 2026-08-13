@@ -32,14 +32,6 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [
-    "onCommand:nexcode.explainCode",
-    "onCommand:nexcode.fixCode",
-    "onCommand:nexcode.generateCode",
-    "onCommand:nexcode.generateProject",
-    "onCommand:nexcode.reviewCode",
-    "onCommand:nexcode.runPipeline"
-  ],
   "main": "./dist/extension.js",
   "contributes": {
     "viewsContainers": {
@@ -56,7 +48,8 @@
         {
           "type": "webview",
           "id": "nexcode-sidebar-view",
-          "name": "NexCode"
+          "name": "NexCode",
+          "icon": "media/icon.png"
         }
       ]
     },

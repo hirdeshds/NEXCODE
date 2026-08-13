@@ -13,14 +13,16 @@ export async function showMarkdownResult(title: string, content: string): Promis
 }
 
 export async function showFixedCode(originalCode: string, fixedCode: string): Promise<void> {
+  const activeLanguage = vscode.window.activeTextEditor?.document.languageId ?? "plaintext";
+
   const originalDocument = await vscode.workspace.openTextDocument({
     content: originalCode,
-    language: "plaintext",
+    language: activeLanguage,
   });
 
   const fixedDocument = await vscode.workspace.openTextDocument({
     content: fixedCode,
-    language: "plaintext",
+    language: activeLanguage,
   });
 
   await vscode.commands.executeCommand(
