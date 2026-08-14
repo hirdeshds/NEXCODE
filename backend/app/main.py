@@ -7,9 +7,10 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.llm import get_cohere_response, get_cohere_stream_response
-from app.schemas import AIRequest, BaseInput, CodeRequest, PromptRequest, PipelineRequest
+from app.schemas import AIRequest, BaseInput, CodeRequest, PromptRequest, PipelineRequest, MCPHealthRequest
 from app.pipeline.agent import run_pipeline
 from app.pipeline.job_store import PipelineJobStore
+from app.pipeline.mcp_connect import check_mcp_health
 from app.config import get_nexcode_config, get_settings
 from app.independent_api import independent_api
 
@@ -350,4 +351,11 @@ async def pipeline_pr(request: PipelineRequest):
     except Exception as e:
         logger.error(f"Error in pipeline_pr: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/pipeline/mcp/health")
+async def pipeline_mcp_health(request: MCPHealthRequest):
+    """Check if an MCP endpoint is reachable."""
+
+    is_healthy = await check_mcp_health(request.mcp_url)
+    return {"mcp_url": request.mcp_url, "healthy": is_healthy}
