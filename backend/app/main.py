@@ -350,3 +350,4 @@ async def pipeline_pr(request: PipelineRequest):
     except Exception as e:
         logger.error(f"Error in pipeline_pr: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+@app.post("/pipeline/mcp/health")

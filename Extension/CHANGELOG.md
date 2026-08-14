@@ -1,5 +1,14 @@
 # Change Log
 
+## 0.0.3
+
+- Added **Pipeline Scan** to the sidebar feature dropdown — runs 3-stage AI code scan (bug check → syntax check → replica run) and shows a live progress card with per-stage pass/fail badges and PR link.
+- All sidebar dropdown options now have emoji icons for quick identification (💬 Chat, ⚡ Generate Code, 🏗️ Generate Project, 📖 Explain Code, 🔧 Fix Code, 🔍 Review Code, ✨ Complete Code, 🚀 Pipeline Scan).
+- Dynamic textarea placeholder — hint text changes automatically based on the selected feature mode.
+- Improved welcome message to list all 8 available features with descriptions.
+- Error messages now display with a ❌ prefix for better visibility.
+- Pipeline card UI: live progress bar during polling, per-stage result badges, error detail, and clickable PR URL.
+
 ## 0.0.2
 
 - Fixed sidebar UI buttons (New Chat, Settings, More, Expand, Move to Panel) not responding to clicks.

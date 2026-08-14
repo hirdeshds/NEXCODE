@@ -9,6 +9,9 @@ import {
   completeCode,
   reviewCode,
   checkHealth,
+  startPipelineScan,
+  getPipelineStatus,
+  PipelineResult,
 } from "./apiClient";
 import { applyProjectStructure } from "./projectParser";
 import { getBackendUrl } from "./config";
@@ -113,6 +116,41 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             } else if (feature === "generate") {
               result = await generateCode(prompt);
               webviewView.webview.postMessage({ type: "response", value: result });
+            } else if (feature === "pipeline") {
+              // Pipeline scan: detect language from active editor
+              const editor = vscode.window.activeTextEditor;
+              const language = editor ? editor.document.languageId.toLowerCase() : "python";
+              const supportedLangs = new Set(["python", "javascript", "js", "ruby", "php"]);
+              if (!supportedLangs.has(language)) {
+                webviewView.webview.postMessage({
+                  type: "pipelineError",
+                  value: `Pipeline does not support \"${language}\" yet. Supported: Python, JavaScript, Ruby, PHP.`,
+                });
+                break;
+              }
+              // Notify UI that pipeline is starting
+              webviewView.webview.postMessage({ type: "pipelineStart", language });
+              const jobId = await startPipelineScan(prompt, language);
+              // Poll for completion (max 60 × 5s = 5 min)
+              let pipelineResult: PipelineResult | undefined;
+              for (let attempt = 0; attempt < 60; attempt++) {
+                const status = await getPipelineStatus(jobId);
+                webviewView.webview.postMessage({
+                  type: "pipelineProgress",
+                  jobId,
+                  status: status.overall_status ?? "processing",
+                  attempt,
+                });
+                if (status.overall_status !== "processing") {
+                  pipelineResult = status;
+                  break;
+                }
+                await new Promise((r) => setTimeout(r, 5000));
+              }
+              webviewView.webview.postMessage({
+                type: "pipelineDone",
+                result: pipelineResult ?? { overall_status: "timeout", error: "Pipeline timed out after 5 minutes." },
+              });
             } else {
               // "chat" — conversational response via /ai endpoint
               result = await chatRespond(prompt);
@@ -375,6 +413,24 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     .status-bar { display: flex; align-items: center; gap: 12px; font-size: 10px; margin-top: 6px; color: var(--vscode-descriptionForeground); }
     .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--vscode-terminal-ansiGreen, #4caf50); display: inline-block; margin-right: 2px; }
     .status-dot.offline { background: var(--vscode-errorForeground, #f44336); }
+    /* ── Pipeline card styles ── */
+    .pipeline-card { border: 1px solid var(--vscode-widget-border); border-radius: 6px; overflow: hidden; margin: 4px 0; font-size: 12px; }
+    .pipeline-card-header { display: flex; align-items: center; gap: 8px; padding: 7px 12px; background: var(--vscode-editorGroupHeader-tabsBackground, rgba(0,0,0,0.2)); font-weight: 600; font-size: 12px; }
+    .pipeline-card-header .pipeline-icon { font-size: 14px; }
+    .pipeline-stage { display: flex; align-items: flex-start; gap: 8px; padding: 6px 12px; border-top: 1px solid var(--vscode-widget-border); }
+    .pipeline-stage-badge { min-width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+    .badge-pass { background: var(--vscode-terminal-ansiGreen, #4caf50); color: #fff; }
+    .badge-fail { background: var(--vscode-errorForeground, #f44336); color: #fff; }
+    .badge-skip { background: var(--vscode-descriptionForeground); color: #fff; }
+    .badge-spin { background: var(--vscode-button-background); color: var(--vscode-button-foreground); animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .pipeline-stage-info { flex: 1; }
+    .pipeline-stage-name { font-weight: 600; margin-bottom: 2px; }
+    .pipeline-stage-detail { color: var(--vscode-descriptionForeground); font-size: 11px; white-space: pre-wrap; word-break: break-word; }
+    .pipeline-pr-row { padding: 6px 12px; border-top: 1px solid var(--vscode-widget-border); display: flex; align-items: center; gap: 8px; }
+    .pipeline-pr-link { color: var(--vscode-textLink-foreground); text-decoration: underline; cursor: pointer; font-size: 11px; }
+    .pipeline-progress-bar { height: 3px; background: var(--vscode-widget-border); border-radius: 0; }
+    .pipeline-progress-fill { height: 100%; background: var(--vscode-button-background); border-radius: 0; transition: width 0.4s ease; }
     `;
   }
 
@@ -394,8 +450,18 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
   <div class="chat-container" id="chat-container">
     <div class="message assistant" id="welcome-message">
       <div class="bubble">
-        Hello! I am <strong>NexCode</strong> - your AI coding assistant.<br><br>
-        Pick a mode from the dropdown below and start typing. You can also attach files or insert selected editor code as context.
+        Hello! I am <strong>NexCode</strong> — your AI coding assistant.<br><br>
+        Pick a mode from the dropdown and start typing:<br>
+        <ul style="margin:6px 0 0 0;padding-left:16px;font-size:12px;">
+          <li><strong>Chat</strong> — general AI assistant</li>
+          <li><strong>Generate Code</strong> — create code from description</li>
+          <li><strong>Generate Project</strong> — scaffold an entire project</li>
+          <li><strong>Explain Code</strong> — understand any code</li>
+          <li><strong>Fix Code</strong> — find and fix bugs</li>
+          <li><strong>Review Code</strong> — get a detailed code review</li>
+          <li><strong>Complete Code</strong> — auto-complete partial code</li>
+          <li><strong>Pipeline Scan</strong> — 3-stage AI scan &amp; PR creation</li>
+        </ul>
       </div>
     </div>
   </div>
@@ -416,10 +482,11 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             <option value="chat">Chat</option>
             <option value="generate">Generate Code</option>
             <option value="generate-project">Generate Project</option>
-            <option value="explain">Explain Code</option>
-            <option value="fix">Fix Code</option>
-            <option value="review">Review Code</option>
-            <option value="complete">Complete Code</option>
+            <option value="explain"> Explain Code</option>
+            <option value="fix"> Fix Code</option>
+            <option value="review"> Review Code</option>
+            <option value="complete"> Complete Code</option>
+            <option value="pipeline"> Pipeline Scan</option>
           </select>
         </div>
         <div class="right-actions">
@@ -624,12 +691,100 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       "  bar.appendChild(pill);",
       "}",
       "",
+      "// ── Pipeline card renderer ──",
+      "var _pipelineMsgEl = null;",
+      "function renderPipelineCard(data) {",
+      "  var r = data.result || {};",
+      "  var status = r.overall_status || 'unknown';",
+      "  var isPassed = status === 'passed';",
+      "  var isTimeout = status === 'timeout';",
+      "  var headerIcon = isPassed ? '\u2705' : isTimeout ? '\u23f1\ufe0f' : '\u274c';",
+      "  var headerLabel = isPassed ? 'Pipeline Passed' : isTimeout ? 'Pipeline Timed Out' : 'Pipeline Failed (' + status + ')';",
+      "  var stages = [",
+      "    { key: 'stage1', name: 'Stage 1 — Basic Bug Check' },",
+      "    { key: 'stage2', name: 'Stage 2 — Syntax & Keywords' },",
+      "    { key: 'stage3', name: 'Stage 3 — Full Scan & Run' },",
+      "  ];",
+      "  var stagesHtml = '';",
+      "  stages.forEach(function(s) {",
+      "    var sd = r[s.key];",
+      "    var badgeClass, badgeChar, detail;",
+      "    if (!sd) { badgeClass = 'badge-skip'; badgeChar = '—'; detail = 'Not executed'; }",
+      "    else if (sd.status === 'passed') { badgeClass = 'badge-pass'; badgeChar = '\u2713'; detail = sd.analysis || 'All checks passed.'; }",
+      "    else { badgeClass = 'badge-fail'; badgeChar = '\u2717'; detail = sd.analysis || 'Check failed.'; }",
+      "    stagesHtml += '<div class=\"pipeline-stage\">'",
+      "      + '<div class=\"pipeline-stage-badge ' + badgeClass + '\">' + badgeChar + '</div>'",
+      "      + '<div class=\"pipeline-stage-info\">'",
+      "      + '<div class=\"pipeline-stage-name\">' + escHtml(s.name) + '</div>'",
+      "      + '<div class=\"pipeline-stage-detail\">' + escHtml(detail) + '</div>'",
+      "      + '</div></div>';",
+      "  });",
+      "  var prHtml = '';",
+      "  if (r.pr && r.pr.pr_url) {",
+      "    prHtml = '<div class=\"pipeline-pr-row\">'",
+      "      + '<span>\ud83d\udd17 Pull Request:</span>'",
+      "      + '<a class=\"pipeline-pr-link\" href=\"' + escHtml(r.pr.pr_url) + '\">' + escHtml(r.pr.pr_url) + '</a>'",
+      "      + '</div>';",
+      "  }",
+      "  var errorHtml = '';",
+      "  if (r.error) {",
+      "    errorHtml = '<div class=\"pipeline-stage\"><div class=\"pipeline-stage-badge badge-fail\">!</div>'",
+      "      + '<div class=\"pipeline-stage-info\"><div class=\"pipeline-stage-name\">Error</div>'",
+      "      + '<div class=\"pipeline-stage-detail\">' + escHtml(r.error) + '</div></div></div>';",
+      "  }",
+      "  return '<div class=\"pipeline-card\">'",
+      "    + '<div class=\"pipeline-card-header\"><span class=\"pipeline-icon\">' + headerIcon + '</span>' + escHtml(headerLabel) + '</div>'",
+      "    + stagesHtml + errorHtml + prHtml",
+      "    + '</div>';",
+      "}",
+      "",
       "// Messages from the extension host",
       "window.addEventListener('message', function(event) {",
       "  var message = event.data;",
       "  switch (message.type) {",
       "    case 'response': hideTyping(); appendMessage('assistant', message.value); break;",
-      "    case 'error': hideTyping(); appendMessage('assistant', 'Error: ' + message.value); break;",
+      "    case 'error': hideTyping(); appendMessage('assistant', '\u274c Error: ' + message.value); break;",
+      "    case 'pipelineStart': {",
+      "      hideTyping();",
+      "      var msgDiv = document.createElement('div');",
+      "      msgDiv.className = 'message assistant';",
+      "      msgDiv.id = 'pipeline-live-msg';",
+      "      var bubble = document.createElement('div');",
+      "      bubble.className = 'bubble';",
+      "      bubble.innerHTML = '<strong>\ud83d\ude80 Pipeline Scan Started</strong><br><small>Language: ' + escHtml(message.language) + '</small>'",
+      "        + '<div class=\"pipeline-progress-bar\"><div class=\"pipeline-progress-fill\" id=\"ppfill\" style=\"width:5%\"></div></div>'",
+      "        + '<div id=\"pipeline-stage-status\" style=\"font-size:11px;margin-top:4px;color:var(--vscode-descriptionForeground)\">Submitting code to pipeline...</div>';",
+      "      msgDiv.appendChild(bubble);",
+      "      chatContainer.appendChild(msgDiv);",
+      "      _pipelineMsgEl = msgDiv;",
+      "      chatContainer.scrollTop = chatContainer.scrollHeight;",
+      "      break;",
+      "    }",
+      "    case 'pipelineProgress': {",
+      "      var fill = document.getElementById('ppfill');",
+      "      var stageStatus = document.getElementById('pipeline-stage-status');",
+      "      var progress = Math.min(5 + message.attempt * 8, 90);",
+      "      if (fill) fill.style.width = progress + '%';",
+      "      if (stageStatus) stageStatus.textContent = 'Status: ' + (message.status || 'processing') + ' (check #' + (message.attempt + 1) + ')';",
+      "      break;",
+      "    }",
+      "    case 'pipelineDone': {",
+      "      if (_pipelineMsgEl) { _pipelineMsgEl.remove(); _pipelineMsgEl = null; }",
+      "      var msgDiv2 = document.createElement('div');",
+      "      msgDiv2.className = 'message assistant';",
+      "      var bubble2 = document.createElement('div');",
+      "      bubble2.className = 'bubble';",
+      "      bubble2.innerHTML = renderPipelineCard(message);",
+      "      msgDiv2.appendChild(bubble2);",
+      "      chatContainer.appendChild(msgDiv2);",
+      "      chatContainer.scrollTop = chatContainer.scrollHeight;",
+      "      break;",
+      "    }",
+      "    case 'pipelineError': {",
+      "      hideTyping();",
+      "      appendMessage('assistant', '\u274c Pipeline Error: ' + message.value);",
+      "      break;",
+      "    }",
       "    case 'checkHealth':",
       "      if (message.status === 'ok') {",
       "        statusDot.className = 'status-dot'; statusText.textContent = 'Backend online';",
@@ -658,6 +813,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       "      var msgs = chatContainer.querySelectorAll('.message:not(#welcome-message)');",
       "      msgs.forEach(function(m) { m.remove(); });",
       "      hideTyping();",
+      "      _pipelineMsgEl = null;",
       "      if (!document.getElementById('welcome-message')) {",
       "        var wDiv = document.createElement('div');",
       "        wDiv.id = 'welcome-message'; wDiv.className = 'message assistant';",
@@ -700,6 +856,22 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       "    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); }",
       "  });",
       "});",
+      "",
+      "// Dynamic placeholder based on selected feature",
+      "var placeholderMap = {",
+      "  'chat':             'Ask NexCode anything... (Enter to send, Shift+Enter for newline)',",
+      "  'generate':         'Describe the code you want to generate...',",
+      "  'generate-project': 'Describe the project to scaffold (e.g. \"a REST API with Flask + SQLite\")...',",
+      "  'explain':          'Paste the code you want explained...',",
+      "  'fix':              'Paste the buggy code to fix...',",
+      "  'review':           'Paste the code you want reviewed...',",
+      "  'complete':         'Paste partial code to auto-complete...',",
+      "  'pipeline':         'Paste code to run through the 3-stage pipeline scan (Python / JS / Ruby / PHP)...',",
+      "};",
+      "featureSelector.addEventListener('change', function() {",
+      "  var ph = placeholderMap[featureSelector.value] || placeholderMap['chat'];",
+      "  promptInput.setAttribute('placeholder', ph);",
+      "});"
     ].join("\n");
   }
 }
