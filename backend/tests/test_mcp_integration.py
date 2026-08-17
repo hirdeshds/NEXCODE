@@ -76,9 +76,9 @@ def test_api_mcp_health_unreachable():
 
 
 def test_api_mcp_run_not_configured(monkeypatch):
-    # Ensure config has no mcp section in main and agent namespaces
+    # Ensure config has no mcp section in config module and main namespace
     monkeypatch.setattr("app.main.get_nexcode_config", lambda: {})
-    monkeypatch.setattr("app.pipeline.agent.get_nexcode_config", lambda: {})
+    monkeypatch.setattr("app.config.get_nexcode_config", lambda: {})
     
     response = client.post("/pipeline/mcp/run", json={
         "code": "print('hello')",
@@ -89,7 +89,7 @@ def test_api_mcp_run_not_configured(monkeypatch):
 
 
 def test_api_mcp_run_health_fails(monkeypatch):
-    # Configure MCP
+    # Configure MCP mock config
     mcp_mock_config = {
         "mcp": {
             "base_url": "https://mcp.company.com",
@@ -97,7 +97,7 @@ def test_api_mcp_run_health_fails(monkeypatch):
         }
     }
     monkeypatch.setattr("app.main.get_nexcode_config", lambda: mcp_mock_config)
-    monkeypatch.setattr("app.pipeline.agent.get_nexcode_config", lambda: mcp_mock_config)
+    monkeypatch.setattr("app.config.get_nexcode_config", lambda: mcp_mock_config)
     
     # Mock health check fail
     mock_health = {"reachable": False, "status": "error", "error": "MCP server offline"}
@@ -117,7 +117,7 @@ def test_api_mcp_run_connect_fails(monkeypatch):
         }
     }
     monkeypatch.setattr("app.main.get_nexcode_config", lambda: mcp_mock_config)
-    monkeypatch.setattr("app.pipeline.agent.get_nexcode_config", lambda: mcp_mock_config)
+    monkeypatch.setattr("app.config.get_nexcode_config", lambda: mcp_mock_config)
     
     mock_health = {"reachable": True, "status": "ok"}
     mock_connect = {"status": "error", "error": "Auth failed"}
@@ -138,7 +138,7 @@ def test_api_mcp_run_success(monkeypatch):
         }
     }
     monkeypatch.setattr("app.main.get_nexcode_config", lambda: mcp_mock_config)
-    monkeypatch.setattr("app.pipeline.agent.get_nexcode_config", lambda: mcp_mock_config)
+    monkeypatch.setattr("app.config.get_nexcode_config", lambda: mcp_mock_config)
     
     mock_health = {"reachable": True, "status": "ok"}
     mock_connect = {"status": "success", "data": {}}
