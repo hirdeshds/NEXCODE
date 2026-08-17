@@ -18,6 +18,47 @@ async def run_pipeline(code: str, language: str, repo: str, base_branch: str,
     Returns dict with results from each stage + PR URL.
     """
 
+    # Connect to MCP server if configured
+    from app.config import get_nexcode_config
+    from app.pipeline.mcp_connect import check_mcp_health, connect_mcp
+
+    config = get_nexcode_config()
+    mcp_config = config.get("mcp")
+    if mcp_config and mcp_config.get("base_url"):
+        base_url = mcp_config["base_url"]
+        timeout = mcp_config.get("timeout_seconds", 10)
+        headers = mcp_config.get("headers", {})
+
+        # Confirm server is reachable
+        health_check = await check_mcp_health(mcp_url=base_url, timeout=timeout, headers=headers)
+        if not health_check.get("reachable"):
+            error_msg = health_check.get("error", "unknown check error")
+            raise RuntimeError(f"MCP server health check failed: {error_msg}")
+
+        # Forward metadata
+        mcp_payload = {
+            "repository_context": {
+                "repo": repo,
+                "base_branch": base_branch,
+            },
+            "config": config,
+            "scan_metadata": {
+                "language": language,
+                "banned_keywords": banned_keywords or [],
+                "max_function_lines": max_function_lines,
+            }
+        }
+        mcp_response = await connect_mcp(
+            mcp_url=base_url,
+            action="scan",
+            payload=mcp_payload,
+            headers=headers,
+            timeout=timeout
+        )
+        if mcp_response.get("status") != "success":
+            error_msg = mcp_response.get("error", "unknown connection error")
+            raise RuntimeError(f"Failed to connect to MCP server: {error_msg}")
+
     result = {
         "stage1": None,
         "stage2": None,

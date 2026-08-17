@@ -64,4 +64,4 @@ class PipelineResponse(BaseModel):
 
 
 class MCPHealthRequest(BaseModel):
-    mcp_url: str = Field(..., min_length=1, max_length=2000, description="MCP server health-check URL")
+    mcp_url: Optional[str] = Field(None, max_length=2000, description="MCP server health-check URL")

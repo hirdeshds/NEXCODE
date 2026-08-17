@@ -46,7 +46,7 @@ def get_nexcode_config() -> dict:
         if not isinstance(config, dict):
             raise RuntimeError("nexcode.config.json must contain a JSON object")
 
-        for section in ("standards", "github", "deployment", "llm"):
+        for section in ("standards", "github", "deployment", "llm", "mcp"):
             if section in config and not isinstance(config[section], dict):
                 raise RuntimeError(f"nexcode.config.json section '{section}' must be an object")
 

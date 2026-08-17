@@ -356,6 +356,46 @@ async def pipeline_pr(request: PipelineRequest):
 @app.post("/pipeline/mcp/health")
 async def pipeline_mcp_health(request: MCPHealthRequest):
     """Check if an MCP endpoint is reachable."""
+    result = await check_mcp_health(mcp_url=request.mcp_url)
+    if not result.get("reachable"):
+        raise HTTPException(
+            status_code=400,
+            detail=result.get("error", "MCP server is unreachable")
+        )
+    return result
 
-    is_healthy = await check_mcp_health(request.mcp_url)
-    return {"mcp_url": request.mcp_url, "healthy": is_healthy}
+
+@app.post("/pipeline/mcp/run")
+async def pipeline_mcp_run(request: PipelineRequest):
+    """Run code scan with MCP checks enforced."""
+    project_config = get_nexcode_config()
+    github = project_config.get("github", {})
+    repo = request.repo or github.get("repo", "")
+    github_token = request.github_token or github.get("token", "")
+
+    mcp_config = project_config.get("mcp")
+    if not mcp_config or not mcp_config.get("base_url"):
+        raise HTTPException(
+            status_code=400,
+            detail="MCP server is not configured in nexcode.config.json"
+        )
+
+    try:
+        standards = project_config.get("standards", {})
+        result = await run_pipeline(
+            code=request.code,
+            language=request.language,
+            repo=repo,
+            base_branch=request.base_branch or github.get("base_branch", "main"),
+            github_token=github_token,
+            banned_keywords=request.banned_keywords or standards.get("banned_keywords", []),
+            max_function_lines=request.max_function_lines or standards.get("max_function_lines", 50),
+        )
+        return {"result": result}
+    except RuntimeError as e:
+        if "MCP" in str(e):
+            raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error in pipeline_mcp_run: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

@@ -7,3 +7,5 @@ docker
 httpx
 pydantic
 pydantic-settings
+# Added comment for Reachable MCP integration dependency verification
+

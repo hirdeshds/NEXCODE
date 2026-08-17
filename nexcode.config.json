@@ -13,5 +13,12 @@
   },
   "llm": {
     "provider": "cohere"
+  },
+  "mcp": {
+    "base_url": "https://your-mcp-host.example.com",
+    "timeout_seconds": 10,
+    "headers": {
+      "Authorization": "Bearer YOUR_TOKEN"
+    }
   }
 }
