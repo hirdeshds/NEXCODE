@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.llm import get_cohere_response, get_cohere_stream_response
-from app.schemas import AIRequest, BaseInput, CodeRequest, PromptRequest, PipelineRequest, MCPHealthRequest
+from app.schemas import AIRequest, BaseInput, CodeRequest, PromptRequest, PipelineRequest, MCPHealthRequest, DeployRequest
 from app.pipeline.agent import run_pipeline
 from app.pipeline.job_store import PipelineJobStore
 from app.pipeline.mcp_connect import check_mcp_health
@@ -399,3 +399,77 @@ async def pipeline_mcp_run(request: PipelineRequest):
     except Exception as e:
         logger.error(f"Error in pipeline_mcp_run: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/pipeline/deploy", tags=["Pipeline"])
+async def pipeline_deploy(request: DeployRequest):
+    """Trigger Vercel deployment of the configured repository."""
+    import httpx
+    
+    project_config = get_nexcode_config()
+    deployment_config = project_config.get("deployment", {})
+    
+    if deployment_config.get("provider") != "vercel":
+        raise HTTPException(status_code=400, detail="Deployment provider is not set to vercel")
+        
+    token = deployment_config.get("token")
+    project_id = deployment_config.get("project_id")
+    team_id = deployment_config.get("team_id")
+    is_production = deployment_config.get("production", False)
+    
+    if not token or token == "YOUR_VERCEL_TOKEN":
+        raise HTTPException(status_code=400, detail="Vercel token is not configured")
+    if not project_id or project_id == "YOUR_PROJECT_ID":
+        raise HTTPException(status_code=400, detail="Vercel project_id is not configured")
+        
+    # Scoping URL by Team ID
+    url = "https://api.vercel.com/v13/deployments"
+    if team_id and team_id != "YOUR_TEAM_ID":
+        url += f"?teamId={team_id}"
+        
+    github_config = project_config.get("github", {})
+    repo_slug = request.repo or github_config.get("repo")
+    ref_branch = request.branch or github_config.get("base_branch", "main")
+    
+    if not repo_slug or repo_slug == "YOUR_GITHUB_OWNER/YOUR_REPOSITORY":
+        raise HTTPException(status_code=400, detail="Repository slug is not configured")
+        
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+    
+    body = {
+        "projectId": project_id,
+        "gitSource": {
+            "type": "github",
+            "repo": repo_slug,
+            "ref": ref_branch
+        }
+    }
+    if is_production:
+        body["target"] = "production"
+        
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            response = await client.post(url, json=body, headers=headers)
+            
+            if response.status_code >= 400:
+                try:
+                    error_data = response.json()
+                    error_msg = error_data.get("error", {}).get("message", response.text)
+                except Exception:
+                    error_msg = response.text
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"Vercel API error: {error_msg}"
+                )
+                
+            data = response.json()
+            return {
+                "deployment_url": f"https://{data.get('url')}" if data.get("url") else None,
+                "deployment_id": data.get("id"),
+                "status": data.get("status")
+            }
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=500, detail=f"HTTP request to Vercel failed: {str(e)}")

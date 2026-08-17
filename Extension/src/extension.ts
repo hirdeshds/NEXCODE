@@ -8,6 +8,7 @@ import {
   getPipelineStatus,
   startPipelineScan,
   PipelineResult,
+  deployToVercel,
 } from "./apiClient";
 import { NexCodeActionProvider } from "./codeActions";
 import { NexCodeCompletionProvider } from "./completionProvider";
@@ -246,6 +247,19 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
+  context.subscriptions.push(
+    vscode.commands.registerCommand("nexcode.deployToVercel", async () => {
+      const result = await runWithProgress("NexCode is deploying to Vercel...", async () => {
+        return deployToVercel();
+      });
+
+      if (result) {
+        vscode.window.showInformationMessage(
+          `Vercel Deployment started! URL: ${result.deployment_url} (ID: ${result.deployment_id})`
+        );
+      }
+    }),
+  );
 
   context.subscriptions.push(
     vscode.languages.registerCodeActionsProvider(

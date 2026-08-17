@@ -9,7 +9,11 @@
     "max_function_lines": 50
   },
   "deployment": {
-    "provider": "render"
+    "provider": "vercel",
+    "token": "YOUR_VERCEL_TOKEN",
+    "team_id": "YOUR_TEAM_ID",
+    "project_id": "YOUR_PROJECT_ID",
+    "production": true
   },
   "llm": {
     "provider": "cohere"

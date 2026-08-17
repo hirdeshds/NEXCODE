@@ -92,6 +92,10 @@
       {
         "command": "nexcode.runPipeline",
         "title": "NexCode: Run Pipeline Scan"
+      },
+      {
+        "command": "nexcode.deployToVercel",
+        "title": "NexCode: Deploy to Vercel"
       }
     ],
     "menus": {
@@ -127,9 +131,20 @@
         },
         {
           "command": "nexcode.runPipeline"
+        },
+        {
+          "command": "nexcode.deployToVercel"
         }
       ]
-    }
+    },
+    "keybindings": [
+      {
+        "command": "nexcode.deployToVercel",
+        "key": "ctrl+alt+d",
+        "mac": "cmd+alt+d",
+        "when": "editorTextFocus"
+      }
+    ]
   },
   "scripts": {
     "compile": "tsc -p ./ --noEmit",

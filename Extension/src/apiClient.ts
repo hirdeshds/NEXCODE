@@ -197,3 +197,13 @@ export async function streamCompleteCode(code: string, onChunk: (chunk: string) 
     request.end();
   });
 }
+
+export interface DeployResult {
+  deployment_url?: string;
+  deployment_id?: string;
+  status?: string;
+}
+
+export async function deployToVercel(repo?: string, branch?: string): Promise<DeployResult> {
+  return requestJson<DeployResult>("POST", "/pipeline/deploy", { repo, branch });
+}

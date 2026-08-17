@@ -65,3 +65,8 @@ class PipelineResponse(BaseModel):
 
 class MCPHealthRequest(BaseModel):
     mcp_url: Optional[str] = Field(None, max_length=2000, description="MCP server health-check URL")
+
+
+class DeployRequest(BaseModel):
+    repo: Optional[str] = Field(None, description="GitHub repository in owner/repo format")
+    branch: Optional[str] = Field(None, description="Branch to deploy")
