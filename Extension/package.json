@@ -111,6 +111,10 @@
         {
           "command": "nexcode.reviewCode",
           "group": "navigation@12"
+        },
+        {
+          "command": "nexcode.runPipeline",
+          "group": "navigation@13"
         }
       ],
       "commandPalette": [
@@ -183,12 +187,17 @@
     "package": "npm run bundle && vsce package --allow-missing-repository",
     "publish": "npm run bundle && vsce publish --allow-missing-repository",
     "vscode:prepublish": "npm run bundle",
-    "prepackage": "npm run bundle"
+    "prepackage": "npm run bundle",
+    "pretest": "tsc -p ./ && npm run bundle",
+    "test": "node ./out/test/runTest.js"
   },
   "devDependencies": {
+    "@types/mocha": "^10.0.7",
     "@types/node": "^20.14.10",
     "@types/vscode": "^1.90.0",
+    "@vscode/test-electron": "^2.4.0",
     "@vscode/vsce": "^3.2.2",
+    "mocha": "^10.4.0",
     "ts-loader": "^9.5.1",
     "typescript": "^5.5.4",
     "webpack": "^5.94.0",

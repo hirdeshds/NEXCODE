@@ -43,6 +43,7 @@ exports.testCompleteCode = testCompleteCode;
 exports.startPipelineScan = startPipelineScan;
 exports.getPipelineStatus = getPipelineStatus;
 exports.streamCompleteCode = streamCompleteCode;
+exports.deployToVercel = deployToVercel;
 const http = __importStar(require("http"));
 const https = __importStar(require("https"));
 const url_1 = require("url");
@@ -192,5 +193,8 @@ async function streamCompleteCode(code, onChunk) {
         request.write(payload);
         request.end();
     });
+}
+async function deployToVercel(repo, branch) {
+    return requestJson("POST", "/pipeline/deploy", { repo, branch });
 }
 //# sourceMappingURL=apiClient.js.map

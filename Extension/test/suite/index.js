@@ -32,30 +32,41 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.showMarkdownResult = showMarkdownResult;
-exports.showFixedCode = showFixedCode;
-const vscode = __importStar(require("vscode"));
-async function showMarkdownResult(title, content) {
-    const document = await vscode.workspace.openTextDocument({
-        content,
-        language: "markdown",
+exports.run = run;
+const path = __importStar(require("path"));
+const mocha_1 = __importDefault(require("mocha"));
+const fs = __importStar(require("fs"));
+function run() {
+    // Create the mocha test
+    const mocha = new mocha_1.default({
+        ui: "tdd",
+        color: true,
     });
-    await vscode.window.showTextDocument(document, {
-        preview: false,
-        viewColumn: vscode.ViewColumn.Beside,
+    const testsRoot = path.resolve(__dirname, "..");
+    return new Promise((c, e) => {
+        try {
+            const suiteDir = path.join(testsRoot, "suite");
+            const files = fs.readdirSync(suiteDir);
+            const testFiles = files.filter((f) => f.endsWith(".test.js"));
+            // Add files to the test suite
+            testFiles.forEach((f) => mocha.addFile(path.resolve(suiteDir, f)));
+            // Run the mocha test
+            mocha.run((failures) => {
+                if (failures > 0) {
+                    e(new Error(`${failures} tests failed.`));
+                }
+                else {
+                    c();
+                }
+            });
+        }
+        catch (err) {
+            e(err);
+        }
     });
 }
-async function showFixedCode(originalCode, fixedCode) {
-    const activeLanguage = vscode.window.activeTextEditor?.document.languageId ?? "plaintext";
-    const originalDocument = await vscode.workspace.openTextDocument({
-        content: originalCode,
-        language: activeLanguage,
-    });
-    const fixedDocument = await vscode.workspace.openTextDocument({
-        content: fixedCode,
-        language: activeLanguage,
-    });
-    await vscode.commands.executeCommand("vscode.diff", originalDocument.uri, fixedDocument.uri, "NexCode Fix Preview");
-}
-//# sourceMappingURL=diffView.js.map
+//# sourceMappingURL=index.js.map

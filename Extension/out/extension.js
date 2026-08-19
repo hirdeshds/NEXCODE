@@ -201,6 +201,14 @@ function activate(context) {
             await (0, diffView_1.showMarkdownResult)("NexCode Pipeline Result", formatPipelineResult(result));
         }
     }));
+    context.subscriptions.push(vscode.commands.registerCommand("nexcode.deployToVercel", async () => {
+        const result = await runWithProgress("NexCode is deploying to Vercel...", async () => {
+            return (0, apiClient_1.deployToVercel)();
+        });
+        if (result) {
+            vscode.window.showInformationMessage(`Vercel Deployment started! URL: ${result.deployment_url} (ID: ${result.deployment_id})`);
+        }
+    }));
     context.subscriptions.push(vscode.languages.registerCodeActionsProvider({ scheme: "file" }, new codeActions_1.NexCodeActionProvider(), {
         providedCodeActionKinds: [
             vscode.CodeActionKind.QuickFix,

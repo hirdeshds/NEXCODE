@@ -33,29 +33,26 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.showMarkdownResult = showMarkdownResult;
-exports.showFixedCode = showFixedCode;
-const vscode = __importStar(require("vscode"));
-async function showMarkdownResult(title, content) {
-    const document = await vscode.workspace.openTextDocument({
-        content,
-        language: "markdown",
-    });
-    await vscode.window.showTextDocument(document, {
-        preview: false,
-        viewColumn: vscode.ViewColumn.Beside,
-    });
+const path = __importStar(require("path"));
+const test_electron_1 = require("@vscode/test-electron");
+async function main() {
+    try {
+        // The folder containing the Extension Manifest package.json
+        // Passed to `--extensionDevelopmentPath`
+        const extensionDevelopmentPath = path.resolve(__dirname, "../../");
+        // The path to the test runner
+        // Passed to --extensionTestsPath
+        const extensionTestsPath = path.resolve(__dirname, "./suite/index");
+        // Download VS Code, unzip it and run the integration test
+        await (0, test_electron_1.runTests)({
+            extensionDevelopmentPath,
+            extensionTestsPath,
+        });
+    }
+    catch (err) {
+        console.error("Failed to run tests", err);
+        process.exit(1);
+    }
 }
-async function showFixedCode(originalCode, fixedCode) {
-    const activeLanguage = vscode.window.activeTextEditor?.document.languageId ?? "plaintext";
-    const originalDocument = await vscode.workspace.openTextDocument({
-        content: originalCode,
-        language: activeLanguage,
-    });
-    const fixedDocument = await vscode.workspace.openTextDocument({
-        content: fixedCode,
-        language: activeLanguage,
-    });
-    await vscode.commands.executeCommand("vscode.diff", originalDocument.uri, fixedDocument.uri, "NexCode Fix Preview");
-}
-//# sourceMappingURL=diffView.js.map
+main();
+//# sourceMappingURL=runTest.js.map

@@ -40,9 +40,9 @@ class NexCodeStatusBar {
     item;
     constructor() {
         this.item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-        this.item.command = "nexcode.explainCode";
+        this.item.command = "nexcode-sidebar-view.focus";
         this.item.text = "$(sparkle) NexCode";
-        this.item.tooltip = "Run NexCode on the selected code";
+        this.item.tooltip = "Open NexCode AI Assistant";
     }
     show() {
         this.item.show();
