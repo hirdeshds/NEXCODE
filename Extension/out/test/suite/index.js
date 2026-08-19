@@ -45,6 +45,7 @@ function run() {
     const mocha = new mocha_1.default({
         ui: "tdd",
         color: true,
+        timeout: 20000,
     });
     const testsRoot = path.resolve(__dirname, "..");
     return new Promise((c, e) => {

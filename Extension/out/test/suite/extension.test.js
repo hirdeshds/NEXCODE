@@ -82,6 +82,11 @@ suite("NexCode Extension Test Suite", () => {
         // Point extension to our local mock server
         const localUrl = `http://127.0.0.1:${serverPort}`;
         await vscode.workspace.getConfiguration("nexcode").update("backendUrl", localUrl, vscode.ConfigurationTarget.Global);
+        // Manually activate extension to ensure all commands are registered
+        const ext = vscode.extensions.getExtension("hirdeshds.nexcode-ai-studio-pro");
+        if (ext) {
+            await ext.activate();
+        }
     });
     suiteTeardown(async () => {
         // Restore original backend URL
