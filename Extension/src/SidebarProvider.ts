@@ -175,6 +175,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
           const items = [
             "Clear Chat",
             "Export Chat History",
+            "Configure Credentials",
             "Restart Backend Connection",
             "Check Backend Status",
           ];
@@ -185,6 +186,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             webviewView.webview.postMessage({ type: "clearChat" });
           } else if (choice === "Export Chat History") {
             webviewView.webview.postMessage({ type: "exportChat" });
+          } else if (choice === "Configure Credentials") {
+            vscode.commands.executeCommand("nexcode.configureCredentials");
           } else if (choice === "Restart Backend Connection") {
             vscode.window.showInformationMessage("Reconnecting to NexCode backend...");
           } else if (choice === "Check Backend Status") {

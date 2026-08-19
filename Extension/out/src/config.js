@@ -33,10 +33,34 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.setExtensionContext = setExtensionContext;
+exports.getSecret = getSecret;
+exports.storeSecret = storeSecret;
 exports.getBackendUrl = getBackendUrl;
 exports.isInlineCompletionEnabled = isInlineCompletionEnabled;
 const vscode = __importStar(require("vscode"));
 const DEFAULT_BACKEND_URL = "https://nexcode-3n9e.onrender.com";
+let extensionContext;
+function setExtensionContext(context) {
+    extensionContext = context;
+}
+async function getSecret(key) {
+    if (!extensionContext) {
+        return undefined;
+    }
+    return extensionContext.secrets.get(key);
+}
+async function storeSecret(key, value) {
+    if (!extensionContext) {
+        return;
+    }
+    if (value === undefined) {
+        await extensionContext.secrets.delete(key);
+    }
+    else {
+        await extensionContext.secrets.store(key, value);
+    }
+}
 function getBackendUrl() {
     const configuredUrl = vscode.workspace
         .getConfiguration("nexcode")

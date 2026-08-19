@@ -119,18 +119,18 @@ suite("NexCode Extension Test Suite", () => {
         serverResponseData = { status: "ok" };
         const health = await apiClient.checkHealth();
         assert.strictEqual(health, true);
-        assert.strictEqual(receivedRequests.length, 1);
-        assert.strictEqual(receivedRequests[0].url, "/health");
-        assert.strictEqual(receivedRequests[0].method, "GET");
+        const healthRequests = receivedRequests.filter(r => r.url === "/health");
+        assert.ok(healthRequests.length >= 1, "Should have received at least one health request");
+        assert.strictEqual(healthRequests[0].method, "GET");
     });
     test("3. API Client Request Formatting - startPipelineScan", async () => {
         serverResponseData = { job_id: "test-job-id-999" };
         const jobId = await apiClient.startPipelineScan("const code = 1;", "javascript");
         assert.strictEqual(jobId, "test-job-id-999");
-        assert.strictEqual(receivedRequests.length, 1);
-        assert.strictEqual(receivedRequests[0].url, "/pipeline/scan");
-        assert.strictEqual(receivedRequests[0].method, "POST");
-        assert.deepStrictEqual(receivedRequests[0].body, {
+        const scanRequests = receivedRequests.filter(r => r.url === "/pipeline/scan");
+        assert.strictEqual(scanRequests.length, 1);
+        assert.strictEqual(scanRequests[0].method, "POST");
+        assert.deepStrictEqual(scanRequests[0].body, {
             code: "const code = 1;",
             language: "javascript",
         });

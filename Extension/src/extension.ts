@@ -16,6 +16,7 @@ import { showFixedCode, showMarkdownResult } from "./diffView";
 import { NexCodeStatusBar } from "./statusBar";
 import { SidebarProvider } from "./SidebarProvider";
 import { applyProjectStructure } from "./projectParser";
+import { setExtensionContext, storeSecret } from "./config";
 
 function getSelectedOrFullText(): string | undefined {
   const editor = vscode.window.activeTextEditor;
@@ -102,6 +103,7 @@ function notifyPipelineResult(result: PipelineResult): void {
 }
 
 export function activate(context: vscode.ExtensionContext): void {
+  setExtensionContext(context);
   const statusBar = new NexCodeStatusBar();
   statusBar.show();
   context.subscriptions.push(statusBar);
@@ -258,6 +260,59 @@ export function activate(context: vscode.ExtensionContext): void {
           `Vercel Deployment started! URL: ${result.deployment_url} (ID: ${result.deployment_id})`
         );
       }
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("nexcode.configureCredentials", async () => {
+      const githubToken = await vscode.window.showInputBox({
+        title: "NexCode: GitHub Personal Access Token",
+        prompt: "Enter your GitHub PAT (leave empty to keep current or clear)",
+        password: true,
+      });
+      if (githubToken !== undefined) {
+        await storeSecret("nexcode.githubToken", githubToken || undefined);
+        vscode.window.showInformationMessage("GitHub Token updated.");
+      }
+
+      const githubRepo = await vscode.window.showInputBox({
+        title: "NexCode: GitHub Repository",
+        prompt: "Enter repo in 'owner/repo' format (leave empty to keep current or clear)",
+      });
+      if (githubRepo !== undefined) {
+        await storeSecret("nexcode.githubRepo", githubRepo || undefined);
+        vscode.window.showInformationMessage("GitHub Repo updated.");
+      }
+
+      const vercelToken = await vscode.window.showInputBox({
+        title: "NexCode: Vercel Access Token",
+        prompt: "Enter Vercel token (leave empty to keep current or clear)",
+        password: true,
+      });
+      if (vercelToken !== undefined) {
+        await storeSecret("nexcode.vercelToken", vercelToken || undefined);
+        vscode.window.showInformationMessage("Vercel Token updated.");
+      }
+
+      const vercelProjectId = await vscode.window.showInputBox({
+        title: "NexCode: Vercel Project ID",
+        prompt: "Enter Vercel project ID (leave empty to keep current or clear)",
+      });
+      if (vercelProjectId !== undefined) {
+        await storeSecret("nexcode.vercelProjectId", vercelProjectId || undefined);
+        vscode.window.showInformationMessage("Vercel Project ID updated.");
+      }
+
+      const vercelTeamId = await vscode.window.showInputBox({
+        title: "NexCode: Vercel Team ID",
+        prompt: "Enter Vercel team ID if applicable (leave empty to keep current or clear)",
+      });
+      if (vercelTeamId !== undefined) {
+        await storeSecret("nexcode.vercelTeamId", vercelTeamId || undefined);
+        vscode.window.showInformationMessage("Vercel Team ID updated.");
+      }
+
+      vscode.window.showInformationMessage("NexCode credentials configuration completed.");
     }),
   );
 

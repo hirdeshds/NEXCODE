@@ -1,7 +1,7 @@
 import * as http from "http";
 import * as https from "https";
 import { URL } from "url";
-import { getBackendUrl } from "./config";
+import { getBackendUrl, getSecret } from "./config";
 
 type HttpMethod = "GET" | "POST";
 
@@ -21,20 +21,43 @@ export interface PipelineResult {
   [key: string]: unknown;
 }
 
-function requestJson<T>(method: HttpMethod, path: string, body?: unknown): Promise<T> {
+async function requestJson<T>(method: HttpMethod, path: string, body?: unknown): Promise<T> {
   const url = new URL(`${getBackendUrl()}${path}`);
   const payload = body ? JSON.stringify(body) : undefined;
   const client = url.protocol === "https:" ? https : http;
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(payload ? { "Content-Length": Buffer.byteLength(payload).toString() } : {}),
+  };
+
+  const githubToken = await getSecret("nexcode.githubToken");
+  if (githubToken) {
+    headers["X-GitHub-Token"] = githubToken;
+  }
+  const githubRepo = await getSecret("nexcode.githubRepo");
+  if (githubRepo) {
+    headers["X-GitHub-Repo"] = githubRepo;
+  }
+  const vercelToken = await getSecret("nexcode.vercelToken");
+  if (vercelToken) {
+    headers["X-Vercel-Token"] = vercelToken;
+  }
+  const vercelProjectId = await getSecret("nexcode.vercelProjectId");
+  if (vercelProjectId) {
+    headers["X-Vercel-Project-Id"] = vercelProjectId;
+  }
+  const vercelTeamId = await getSecret("nexcode.vercelTeamId");
+  if (vercelTeamId) {
+    headers["X-Vercel-Team-Id"] = vercelTeamId;
+  }
 
   return new Promise((resolve, reject) => {
     const request = client.request(
       url,
       {
         method,
-        headers: {
-          "Content-Type": "application/json",
-          ...(payload ? { "Content-Length": Buffer.byteLength(payload).toString() } : {}),
-        },
+        headers,
       },
       (response) => {
         let data = "";
@@ -128,15 +151,38 @@ export async function streamCompleteCode(code: string, onChunk: (chunk: string) 
   const payload = JSON.stringify({ code });
   const client = url.protocol === "https:" ? https : http;
 
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "Content-Length": Buffer.byteLength(payload).toString(),
+  };
+
+  const githubToken = await getSecret("nexcode.githubToken");
+  if (githubToken) {
+    headers["X-GitHub-Token"] = githubToken;
+  }
+  const githubRepo = await getSecret("nexcode.githubRepo");
+  if (githubRepo) {
+    headers["X-GitHub-Repo"] = githubRepo;
+  }
+  const vercelToken = await getSecret("nexcode.vercelToken");
+  if (vercelToken) {
+    headers["X-Vercel-Token"] = vercelToken;
+  }
+  const vercelProjectId = await getSecret("nexcode.vercelProjectId");
+  if (vercelProjectId) {
+    headers["X-Vercel-Project-Id"] = vercelProjectId;
+  }
+  const vercelTeamId = await getSecret("nexcode.vercelTeamId");
+  if (vercelTeamId) {
+    headers["X-Vercel-Team-Id"] = vercelTeamId;
+  }
+
   return new Promise((resolve, reject) => {
     const request = client.request(
       url,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Content-Length": Buffer.byteLength(payload).toString(),
-        },
+        headers,
       },
       (response) => {
         response.setEncoding("utf8");

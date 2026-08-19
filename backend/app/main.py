@@ -3,7 +3,8 @@ import uuid
 import logging
 import asyncio
 from contextlib import suppress
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Header
+from typing import Optional
 from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.llm import get_cohere_response, get_cohere_stream_response
@@ -300,11 +301,27 @@ async def independent_stream_complete(request: BaseInput):
 
 
 @app.post("/pipeline/scan", tags=["Pipeline"])
-async def pipeline_scan(request: PipelineRequest):
+async def pipeline_scan(
+    request: PipelineRequest,
+    x_github_token: Optional[str] = Header(None, alias="X-GitHub-Token"),
+    x_github_repo: Optional[str] = Header(None, alias="X-GitHub-Repo"),
+):
     """Run 3-stage AI scan on code. Returns job_id to check status."""
     
+    req_data = request.model_dump()
+    project_config = get_nexcode_config()
+    github = project_config.get("github", {})
+    
+    github_token = x_github_token or request.github_token or github.get("token", "")
+    repo = x_github_repo or request.repo or github.get("repo", "")
+    
+    req_data["github_token"] = github_token
+    req_data["repo"] = repo
+    if not req_data["base_branch"]:
+        req_data["base_branch"] = request.base_branch or github.get("base_branch", "main")
+        
     job_id = uuid.uuid4().hex[:12]
-    pipeline_job_store.create(job_id, request.model_dump())
+    pipeline_job_store.create(job_id, req_data)
     if not has_active_pipeline_worker():
         await process_next_pipeline_job()
     return {"job_id": job_id, "status": "processing"}
@@ -322,13 +339,17 @@ async def pipeline_status(job_id: str):
 
 
 @app.post("/pipeline/pr", tags=["Pipeline"])
-async def pipeline_pr(request: PipelineRequest):
+async def pipeline_pr(
+    request: PipelineRequest,
+    x_github_token: Optional[str] = Header(None, alias="X-GitHub-Token"),
+    x_github_repo: Optional[str] = Header(None, alias="X-GitHub-Repo"),
+):
     """Run scan + create PR in one call. Requires repo and github_token."""
 
     project_config = get_nexcode_config()
     github = project_config.get("github", {})
-    repo = request.repo or github.get("repo", "")
-    github_token = request.github_token or github.get("token", "")
+    repo = x_github_repo or request.repo or github.get("repo", "")
+    github_token = x_github_token or request.github_token or github.get("token", "")
     if not repo or not github_token:
         raise HTTPException(status_code=400, detail="repo and github_token are required")
 
@@ -366,12 +387,16 @@ async def pipeline_mcp_health(request: MCPHealthRequest):
 
 
 @app.post("/pipeline/mcp/run")
-async def pipeline_mcp_run(request: PipelineRequest):
+async def pipeline_mcp_run(
+    request: PipelineRequest,
+    x_github_token: Optional[str] = Header(None, alias="X-GitHub-Token"),
+    x_github_repo: Optional[str] = Header(None, alias="X-GitHub-Repo"),
+):
     """Run code scan with MCP checks enforced."""
     project_config = get_nexcode_config()
     github = project_config.get("github", {})
-    repo = request.repo or github.get("repo", "")
-    github_token = request.github_token or github.get("token", "")
+    repo = x_github_repo or request.repo or github.get("repo", "")
+    github_token = x_github_token or request.github_token or github.get("token", "")
 
     mcp_config = project_config.get("mcp")
     if not mcp_config or not mcp_config.get("base_url"):
@@ -402,22 +427,29 @@ async def pipeline_mcp_run(request: PipelineRequest):
 
 
 @app.post("/pipeline/deploy", tags=["Pipeline"])
-async def pipeline_deploy(request: DeployRequest):
+async def pipeline_deploy(
+    request: DeployRequest,
+    x_vercel_token: Optional[str] = Header(None, alias="X-Vercel-Token"),
+    x_vercel_project_id: Optional[str] = Header(None, alias="X-Vercel-Project-Id"),
+    x_vercel_team_id: Optional[str] = Header(None, alias="X-Vercel-Team-Id"),
+):
     """Trigger Vercel deployment of the configured repository."""
     import httpx
     
     project_config = get_nexcode_config()
     deployment_config = project_config.get("deployment", {})
     
-    if deployment_config.get("provider") != "vercel":
+    provider = deployment_config.get("provider", "vercel")
+    if provider != "vercel":
         raise HTTPException(status_code=400, detail="Deployment provider is not set to vercel")
         
-    token = deployment_config.get("token")
-    project_id = deployment_config.get("project_id")
-    team_id = deployment_config.get("team_id")
+    token = x_vercel_token or deployment_config.get("token")
+    project_id = x_vercel_project_id or deployment_config.get("project_id")
+    team_id = x_vercel_team_id or deployment_config.get("team_id")
     is_production = deployment_config.get("production", False)
     
     if not token or token == "YOUR_VERCEL_TOKEN":
+        raise HTTPException(status_code=400, detail="Vercel token is not configured")
         raise HTTPException(status_code=400, detail="Vercel token is not configured")
     if not project_id or project_id == "YOUR_PROJECT_ID":
         raise HTTPException(status_code=400, detail="Vercel project_id is not configured")
